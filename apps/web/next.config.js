@@ -8,11 +8,18 @@ const nextConfig = {
     // Disable TypeScript error checks during build for deployment
     ignoreBuildErrors: true,
   },
-  // Disable static generation to avoid SSR issues
+  // Completely disable static generation to avoid SSR issues
   output: 'standalone',
+  trailingSlash: false,
   experimental: {
-    // Disable static optimization for all pages
+    // Disable all static optimization
     serverComponentsExternalPackages: [],
+    // Disable static optimization for all pages
+    disableOptimizedLoading: true,
+  },
+  // Force all pages to be server-rendered only
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
   },
   env: {
     // For demo/sampler, default to built-in mock API routes
