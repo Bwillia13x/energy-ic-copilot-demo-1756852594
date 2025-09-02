@@ -1,0 +1,21 @@
+name: Vercel Deploy Hook
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  trigger-vercel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel Deploy Hook
+        env:
+          VERCEL_DEPLOY_HOOK_URL: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$VERCEL_DEPLOY_HOOK_URL" ]; then
+            echo "VERCEL_DEPLOY_HOOK_URL is not set. Add it in GitHub repo Settings > Secrets and variables > Actions" 1>&2
+            exit 1
+          fi
+          curl -sS -X POST "$VERCEL_DEPLOY_HOOK_URL" -H 'Content-Type: application/json' -d '{"trigger":"github-actions"}'
+          echo "Deploy hook triggered."
+
