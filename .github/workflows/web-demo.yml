@@ -1,0 +1,53 @@
+name: Web Demo CI
+
+on:
+  push:
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/web-demo.yml'
+  pull_request:
+    paths:
+      - 'apps/web/**'
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Start server
+        run: |
+          nohup npm run start >/dev/null 2>&1 &
+          echo $! > .next.pid
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || true)
+            if [ "$code" = "200" ]; then echo "Server up"; break; fi
+            sleep 0.5
+          done
+
+      - name: Demo smoke check
+        env:
+          DEMO_BASE: http://localhost:3000
+        run: npm run demo:check
+
+      - name: Stop server
+        if: always()
+        run: |
+          kill -TERM $(cat .next.pid) || true
+          rm -f .next.pid
+
