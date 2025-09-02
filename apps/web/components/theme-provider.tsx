@@ -29,16 +29,27 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = React.useState<Theme>(defaultTheme)
+  const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
+    setMounted(true)
     // Only access localStorage on the client side
-    const storedTheme = localStorage?.getItem(storageKey) as Theme
-    if (storedTheme) {
-      setTheme(storedTheme)
+    if (typeof window !== 'undefined') {
+      try {
+        const storedTheme = localStorage.getItem(storageKey) as Theme
+        if (storedTheme) {
+          setTheme(storedTheme)
+        }
+      } catch (error) {
+        // localStorage might not be available in some environments
+        console.warn('Unable to access localStorage:', error)
+      }
     }
   }, [storageKey])
 
   React.useEffect(() => {
+    if (!mounted) return
+
     const root = window.document.documentElement
 
     root.classList.remove('light', 'dark')
@@ -54,14 +65,29 @@ export function ThemeProvider({
     }
 
     root.classList.add(theme)
-  }, [theme])
+  }, [theme, mounted])
 
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage?.setItem(storageKey, theme)
+      if (mounted && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(storageKey, theme)
+        } catch (error) {
+          console.warn('Unable to save theme to localStorage:', error)
+        }
+      }
       setTheme(theme)
     },
+  }
+
+  // Return a simplified provider during SSR
+  if (!mounted) {
+    return (
+      <ThemeProviderContext.Provider {...props} value={value}>
+        {children}
+      </ThemeProviderContext.Provider>
+    )
   }
 
   return (
@@ -74,8 +100,9 @@ export function ThemeProvider({
 export const useTheme = () => {
   const context = React.useContext(ThemeProviderContext)
 
-  if (context === undefined)
+  if (context === undefined) {
     throw new Error('useTheme must be used within a ThemeProvider')
+  }
 
   return context
 }
