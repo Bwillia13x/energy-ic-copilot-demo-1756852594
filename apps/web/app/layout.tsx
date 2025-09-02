@@ -10,6 +10,9 @@ import { ApiHealthBanner } from '@/components/api-health-banner'
 import { DemoBanner } from '@/components/demo-banner'
 import { TopProgress } from '@/components/top-progress'
 import { LoadingProvider } from '@/lib/loading-context'
+import { Analytics } from '@/components/analytics'
+import { PerformanceMonitor } from '@/components/performance-monitor'
+import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -74,6 +77,9 @@ export default function RootLayout({
               </div>
               <SiteFooter />
               <Toaster />
+              <Analytics />
+              <PerformanceMonitor />
+              <KeyboardShortcuts />
             </ErrorBoundary>
           </LoadingProvider>
         </ThemeProvider>

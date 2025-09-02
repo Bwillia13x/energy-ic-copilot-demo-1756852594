@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useState, useEffect, useRef, useMemo } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,7 @@ import dynamic from 'next/dynamic'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Search, X, Copy, Download, Upload, CheckSquare, Square, Calculator, TrendingUp, Target, BarChart3, Settings, Zap, Save, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { fetchJsonWithRetry, HttpError } from '@/lib/http'
+import { fetchJsonWithRetry } from '@/lib/http'
 
 // Dynamically import CompanyComparison to avoid SSR issues
 const CompanyComparison = dynamic(() => import('@/components/company-comparison').then(mod => ({ default: mod.CompanyComparison })), {
@@ -66,6 +66,7 @@ function ComparePageContent() {
 
   useEffect(() => {
     fetchCompaniesData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Initialize query, sort, selection, metric and chart type from URL/localStorage

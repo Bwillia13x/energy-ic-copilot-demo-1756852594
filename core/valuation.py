@@ -268,9 +268,12 @@ class ValuationEngine:
             pv_fcff = projected_fcff / (1 + wacc) ** year
             projected_fcffs.append(pv_fcff)
 
-        # Terminal value
-        terminal_value = (fcff * (1 + inputs.terminal_growth) /
-                         (wacc - inputs.terminal_growth))
+        # Terminal value using Gordon Growth Model
+        # TV = FCFF_terminal / (WACC - g)
+        # where FCFF_terminal = FCFF_current * (1 + g)
+        terminal_value = (fcff * (1 + inputs.terminal_growth)) / (wacc - inputs.terminal_growth)
+
+        # Present value of terminal value
         pv_terminal = terminal_value / (1 + wacc) ** inputs.projection_years
 
         dcf_value = sum(projected_fcffs) + pv_terminal

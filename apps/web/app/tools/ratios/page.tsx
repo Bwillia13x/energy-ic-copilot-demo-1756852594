@@ -146,40 +146,57 @@ export default function FinancialRatiosPage() {
     const netIncome = kpis.NetIncome?.value || 0
     const totalAssets = (kpis.NetDebt?.value || 0) + (kpis.ShareholderEquity?.value || 10000)
     const totalEquity = kpis.ShareholderEquity?.value || 10000
+    const netDebt = kpis.NetDebt?.value || 0
+    const interestExpense = kpis.InterestExpense?.value || 0
+    const ffo = kpis.FFO?.value || 0
+
+    // More accurate estimates
     const currentAssets = totalAssets * 0.6 // Estimate
     const currentLiabilities = totalAssets * 0.4 // Estimate
     const cash = currentAssets * 0.3 // Estimate
-    const revenue = ebitda / 0.25 // Estimate from EBITDA margin
+    // const inventory = currentAssets * 0.2 // Estimate inventory as 20% of current assets
+    const receivables = currentAssets * 0.3 // Estimate receivables
+
+    // Use FFO if available, otherwise estimate revenue from EBITDA
+    const revenue = ffo > 0 ? ffo * 1.5 : (ebitda > 0 ? ebitda / 0.25 : 0) // Estimate from EBITDA margin
+
+    // Calculate NOPAT for ROIC
+    const taxRate = 0.25 // Assume 25% tax rate
+    const normalizedEBIT = ebitda - (kpis.MaintenanceCapex?.value || ebitda * 0.1)
+    const nopat = normalizedEBIT * (1 - taxRate)
+
+    // Invested capital = Total Assets - Current Liabilities (simplified)
+    const investedCapital = totalAssets - currentLiabilities
 
     return {
       profitability: {
         roa: totalAssets > 0 ? netIncome / totalAssets : 0,
         roe: totalEquity > 0 ? netIncome / totalEquity : 0,
-        roic: ebitda > 0 ? (ebitda - (kpis.InterestExpense?.value || 0)) / totalAssets : 0,
+        roic: investedCapital > 0 ? nopat / investedCapital : 0,
         gross_margin: revenue > 0 ? (revenue - (kpis.MaintenanceCapex?.value || 0)) / revenue : 0,
         operating_margin: revenue > 0 ? ebitda / revenue : 0,
         net_margin: revenue > 0 ? netIncome / revenue : 0
       },
       liquidity: {
         current_ratio: currentLiabilities > 0 ? currentAssets / currentLiabilities : 0,
-        quick_ratio: currentLiabilities > 0 ? (currentAssets - (kpis.NetDebt?.value || 0)) / currentLiabilities : 0,
+        quick_ratio: currentLiabilities > 0 ? (cash + receivables) / currentLiabilities : 0,
         cash_ratio: currentLiabilities > 0 ? cash / currentLiabilities : 0
       },
       leverage: {
-        debt_to_equity: totalEquity > 0 ? (kpis.NetDebt?.value || 0) / totalEquity : 0,
-        debt_to_assets: totalAssets > 0 ? (kpis.NetDebt?.value || 0) / totalAssets : 0,
-        interest_coverage: (kpis.InterestExpense?.value || 1) > 0 ? ebitda / (kpis.InterestExpense?.value || 1) : 0
+        debt_to_equity: totalEquity > 0 ? netDebt / totalEquity : 0,
+        debt_to_assets: totalAssets > 0 ? netDebt / totalAssets : 0,
+        interest_coverage: interestExpense > 0 ? ebitda / interestExpense : 0
       },
       efficiency: {
         asset_turnover: totalAssets > 0 ? revenue / totalAssets : 0,
-        inventory_turnover: 8, // Industry average
-        receivables_turnover: 6 // Industry average
+        inventory_turnover: 8, // Industry average for energy infrastructure
+        receivables_turnover: 6 // Industry average for energy infrastructure
       },
       valuation: {
         pe_ratio: netIncome > 0 ? totalEquity / netIncome : 0,
-        pb_ratio: totalEquity > 0 ? totalEquity / totalEquity : 1, // Simplified
+        pb_ratio: totalEquity > 0 ? 1.0 : 0, // Book value per share approximation
         ev_ebitda: ebitda > 0 ? (totalAssets - cash) / ebitda : 0,
-        dividend_yield: netIncome > 0 ? (kpis.NetIncome?.value || 0) * 0.4 / totalEquity : 0
+        dividend_yield: 0 // Would need actual dividend data
       }
     }
   }

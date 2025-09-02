@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Chart,
@@ -11,10 +11,9 @@ import {
   Bar,
   BarChart,
   XAxis,
-  YAxis,
-  Cell
+  YAxis
 } from '@/components/ui/chart'
-import { GitCompare, TrendingUp, BarChart3, PieChart } from 'lucide-react'
+import { GitCompare, TrendingUp, BarChart3 } from 'lucide-react'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
 interface CompanyData {

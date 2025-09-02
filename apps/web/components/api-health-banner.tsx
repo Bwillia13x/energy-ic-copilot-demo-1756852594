@@ -10,6 +10,9 @@ export function ApiHealthBanner() {
   const [checking, setChecking] = useState(true)
   const [dismissed, setDismissed] = useState(false)
 
+  const demo = process.env.NEXT_PUBLIC_DEMO === '1' || (process.env.NEXT_PUBLIC_API_URL || '').startsWith('/api/demo')
+  if (demo) return null
+
   const check = async () => {
     try {
       setChecking(true)
@@ -63,4 +66,3 @@ export function ApiHealthBanner() {
     </div>
   )
 }
-

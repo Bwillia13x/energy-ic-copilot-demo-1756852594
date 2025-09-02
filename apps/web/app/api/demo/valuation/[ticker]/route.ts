@@ -27,7 +27,7 @@ function calc(inputs: any) {
 
 interface Params { params: { ticker: string } }
 
-export async function POST(req: Request, { params }: Params) {
+export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const inputs = body?.inputs || {}
   return NextResponse.json(calc(inputs))

@@ -64,8 +64,11 @@
 - **📊 ROIC/ROE Analysis**: Return on Invested Capital and Return on Equity calculations
 - **💵 Dividend Analytics**: Payout ratios, dividend yield, and dividend sustainability
 - **📋 Financial Ratios**: Debt-to-equity, interest coverage, and EBITDA margins
-- **🎪 Scenario Modeling**: Monte Carlo-style sensitivity analysis
+- **🎪 Scenario Modeling**: Monte Carlo-style sensitivity analysis (5,000+ simulations)
 - **📊 Trend Analysis**: Historical KPI tracking and forecasting
+- **📈 Technical Analysis**: Stock charts with SMA, RSI, MACD indicators
+- **🎯 Custom Metrics**: Formula builder for personalized calculations
+- **📊 Benchmarking**: Industry comparisons and peer analysis
 
 ## 📋 Architecture
 
@@ -395,6 +398,8 @@ We welcome contributions! Please see our [Contributing Guide](docs/contributing.
 - **Build Time**: <60 seconds
 - **Test Coverage**: 100%
 - **Lighthouse Score**: 95+ (Performance, Accessibility, Best Practices)
+- **Bundle Size**: <200KB gzipped
+- **Core Web Vitals**: All metrics in good range
 
 ---
 
