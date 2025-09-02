@@ -1,5 +1,4 @@
-// Force dynamic rendering for all pages to avoid SSR context issues
-export const dynamic = 'force-dynamic'
+// Dynamic rendering configured via next.config.js
 
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
