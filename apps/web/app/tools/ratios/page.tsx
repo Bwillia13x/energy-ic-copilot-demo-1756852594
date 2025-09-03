@@ -12,9 +12,20 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ArrowLeft, BarChart3, TrendingUp, Target, AlertCircle, CheckCircle } from 'lucide-react'
+import { fetchJsonWithRetry } from '@/lib/http'
+
+interface XbrlMeta { form?: string; end?: string; frame?: string; filed?: string; unit?: string; raw_value?: number | null }
+interface XbrlResponse {
+  ticker: string
+  cik: string
+  metrics_millions: Record<string, number | null>
+  facts_meta: Record<string, XbrlMeta | null>
+  source: string
+  retrieved_at: string
+  period_preference?: string
+}
 import { Chart } from '@/components/ui/chart'
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
-import { fetchJsonWithRetry } from '@/lib/http'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
 interface CompanyRatios {
@@ -91,6 +102,8 @@ export default function FinancialRatiosPage() {
   const [selectedIndustry, setSelectedIndustry] = useState<string>('energy')
   const [loading, setLoading] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'comparison' | 'trends'>('overview')
+  const [xbrl, setXbrl] = useState<XbrlResponse | null>(null)
+  const [xbrlPeriod, setXbrlPeriod] = useState<'any'|'ytd'|'qtd'>('any')
 
   // Fetch companies data
   useEffect(() => {
@@ -144,6 +157,23 @@ export default function FinancialRatiosPage() {
       setLoading(false)
     }
   }
+
+  // Load XBRL for selected ticker (US tickers only); default to KMI if none
+  useEffect(() => {
+    const t = selectedTicker || 'KMI'
+    ;(async () => {
+      try {
+        const res = await fetchJsonWithRetry<XbrlResponse>(
+          `${process.env.NEXT_PUBLIC_API_URL}/xbrl/${t}?period=${xbrlPeriod}`,
+          undefined,
+          { timeoutMs: 8000, retries: 2, backoffMs: 500 }
+        )
+        setXbrl(res)
+      } catch {
+        setXbrl(null)
+      }
+    })()
+  }, [selectedTicker, xbrlPeriod])
 
   const calculateRatios = (kpis: Record<string, any>) => {
     const ebitda = kpis.EBITDA?.value || 0
@@ -329,7 +359,7 @@ export default function FinancialRatiosPage() {
         <>
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Radar Chart */}
               <Card>
                 <CardHeader>
@@ -385,6 +415,39 @@ export default function FinancialRatiosPage() {
                   </Card>
                 ))}
               </div>
+
+              {/* Compact XBRL Sidebar */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>SEC XBRL ({selectedTicker || 'KMI'})</CardTitle>
+                    <div className="flex items-center gap-1" role="group" aria-label="XBRL period selector">
+                      {(['any','ytd','qtd'] as const).map(p => (
+                        <Button key={p} size="sm" variant={xbrlPeriod===p?'default':'outline'} onClick={() => setXbrlPeriod(p)} aria-pressed={xbrlPeriod===p}>{p.toUpperCase()}</Button>
+                      ))}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {xbrl ? (
+                    <div className="space-y-2 text-sm">
+                      {(['ebitda','net_income','interest_expense','net_debt'] as const).map(key => {
+                        const val = xbrl.metrics_millions[key]
+                        const meta = xbrl.facts_meta[key]
+                        return (
+                          <div key={key} className="flex items-center justify-between">
+                            <span className="text-muted-foreground capitalize">{key.replace('_',' ')}</span>
+                            <span className="font-mono" title={`${meta?.form||'—'} / ${meta?.end||'—'} / ${meta?.frame||'—'}`}>{val!=null ? val.toLocaleString() : '-'}</span>
+                          </div>
+                        )
+                      })}
+                      <div className="text-xs text-muted-foreground pt-2">Pref: {xbrl.period_preference||'ANY'} • <a className="underline" href={`https://data.sec.gov/api/xbrl/companyfacts/CIK${(xbrl.cik||'').padStart(10,'0')}.json`} target="_blank" rel="noreferrer noopener">Companyfacts</a></div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">Structured metrics unavailable</div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -511,5 +574,3 @@ export default function FinancialRatiosPage() {
     </div>
   )
 }
-
-
