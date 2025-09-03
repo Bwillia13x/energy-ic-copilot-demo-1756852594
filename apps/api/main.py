@@ -14,8 +14,8 @@ import yaml
 import tempfile
 import os
 
-# Add the parent directory to Python path to import core modules
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Add the current directory to Python path to import core modules
+sys.path.insert(0, str(Path(__file__).parent))
 
 # Import core modules
 from core.extract import KPIExtractor, extract_kpis_from_filings  # noqa: E402
@@ -24,7 +24,7 @@ from core.cite import Citation  # noqa: E402,F401
 from core.data_manager import create_data_manager  # noqa: E402
 
 # Configuration
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROJECT_ROOT = Path(__file__).parent
 DATA_DIR = PROJECT_ROOT / "data"
 FILINGS_DIR = DATA_DIR / "filings"
 MAPPINGS_PATH = DATA_DIR / "mappings.yaml"
