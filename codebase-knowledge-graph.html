@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Energy IC Copilot - Codebase Knowledge Graph</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button.active {
+            background: #28a745;
+        }
+
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: white;
+        }
+
+        #graph {
+            height: 800px;
+            position: relative;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .node {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .node:hover {
+            filter: brightness(1.1);
+        }
+
+        .node text {
+            font-size: 12px;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .link {
+            stroke: #999;
+            stroke-opacity: 0.6;
+            stroke-width: 2px;
+            fill: none;
+        }
+
+        .node.root {
+            fill: #ff6b6b;
+        }
+
+        .node.app {
+            fill: #4ecdc4;
+        }
+
+        .node.core {
+            fill: #45b7d1;
+        }
+
+        .node.data {
+            fill: #96ceb4;
+        }
+
+        .node.docs {
+            fill: #ffeaa7;
+        }
+
+        .node.config {
+            fill: #dda0dd;
+        }
+
+        .node.tests {
+            fill: #f7dc6f;
+        }
+
+        .node.deployment {
+            fill: #bb8fce;
+        }
+
+        .legend {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid #ddd;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 1000;
+            max-width: 300px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 400px;
+            display: none;
+        }
+
+        .info-panel.show {
+            display: block;
+        }
+
+        .info-panel h3 {
+            margin: 0 0 15px 0;
+            color: #495057;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 8px;
+        }
+
+        .info-panel p {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        .tech-stack {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        .tech-stack h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+
+        .tech-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tech-tag {
+            background: #007bff;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Energy IC Copilot</h1>
+            <p>Codebase Knowledge Graph - Development Setup & Architecture</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>View:</label>
+                <button id="overview-btn" class="active">Overview</button>
+                <button id="detailed-btn">Detailed</button>
+                <button id="tech-btn">Technology Stack</button>
+            </div>
+
+            <div class="control-group">
+                <label>Focus:</label>
+                <select id="focus-select">
+                    <option value="all">All Components</option>
+                    <option value="frontend">Frontend Only</option>
+                    <option value="backend">Backend Only</option>
+                    <option value="data">Data Layer</option>
+                    <option value="deployment">Deployment</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <button id="reset-btn">Reset View</button>
+                <button id="center-btn">Center Graph</button>
+            </div>
+        </div>
+
+        <div id="graph"></div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ff6b6b;"></div>
+                <span>Root/Project</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #4ecdc4;"></div>
+                <span>Applications</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #45b7d1;"></div>
+                <span>Core Modules</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #96ceb4;"></div>
+                <span>Data & Config</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #ffeaa7;"></div>
+                <span>Documentation</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #dda0dd;"></div>
+                <span>Configuration</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f7dc6f;"></div>
+                <span>Testing</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #bb8fce;"></div>
+                <span>Deployment</span>
+            </div>
+        </div>
+
+        <div id="tooltip" class="tooltip"></div>
+
+        <div id="info-panel" class="info-panel">
+            <h3 id="info-title">Component Information</h3>
+            <p id="info-description">Click on any node to see detailed information about that component.</p>
+            <div class="tech-stack">
+                <h4>Technology Stack</h4>
+                <div id="tech-tags" class="tech-tags">
+                    <!-- Tech tags will be populated dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Knowledge graph data
+        const graphData = {
+            nodes: [
+                // Root level
+                { id: "root", name: "Energy IC Copilot", type: "root", level: 0, description: "Main project root - Monorepo structure for energy infrastructure analysis platform", tech: ["Monorepo", "Git"] },
+
+                // Applications
+                { id: "web-app", name: "Web App (Next.js)", type: "app", level: 1, description: "Frontend application built with Next.js 14, TypeScript, and Tailwind CSS", tech: ["Next.js", "React", "TypeScript", "Tailwind CSS"] },
+                { id: "api-app", name: "API App (FastAPI)", type: "app", level: 1, description: "Backend API built with FastAPI, providing KPI extraction and valuation services", tech: ["FastAPI", "Python", "Uvicorn", "Pydantic"] },
+
+                // Web App components
+                { id: "web-pages", name: "Pages & Routes", type: "app", level: 2, description: "Next.js pages including company analysis, comparison, and valuation tools", tech: ["Next.js Routing", "App Router"] },
+                { id: "web-components", name: "UI Components", type: "app", level: 2, description: "Reusable React components using Radix UI and custom styling", tech: ["React Components", "Radix UI", "Tailwind"] },
+                { id: "web-api-routes", name: "API Routes", type: "app", level: 2, description: "Next.js API routes for demo data and PDF processing", tech: ["Next.js API", "Serverless Functions"] },
+                { id: "web-hooks", name: "Custom Hooks", type: "app", level: 2, description: "React hooks for data fetching, state management, and utilities", tech: ["React Hooks", "Custom Hooks"] },
+
+                // API App components
+                { id: "api-endpoints", name: "API Endpoints", type: "app", level: 2, description: "RESTful endpoints for companies, KPIs, valuations, and XBRL data", tech: ["REST API", "FastAPI", "CORS"] },
+                { id: "api-health", name: "Health Monitoring", type: "app", level: 2, description: "Health check endpoints and service monitoring", tech: ["Health Checks", "Monitoring"] },
+
+                // Core modules
+                { id: "core-extract", name: "KPI Extractor", type: "core", level: 1, description: "Core module for extracting KPIs from SEC filings and documents", tech: ["Python", "NLP", "Document Processing"] },
+                { id: "core-valuation", name: "Valuation Engine", type: "core", level: 1, description: "Financial valuation calculations and scenario modeling", tech: ["Python", "Financial Modeling", "Monte Carlo"] },
+                { id: "core-cite", name: "Citation System", type: "core", level: 1, description: "Citation and source tracking for extracted data", tech: ["Python", "Citation Management"] },
+                { id: "core-edgar", name: "EDGAR Client", type: "core", level: 1, description: "SEC EDGAR API client for regulatory filings", tech: ["SEC API", "Python", "HTTP Client"] },
+                { id: "core-xbrl", name: "XBRL Processor", type: "core", level: 1, description: "XBRL financial data processing and standardization", tech: ["XBRL", "Python", "Financial Data"] },
+                { id: "core-data", name: "Data Manager", type: "core", level: 1, description: "Central data management and caching layer", tech: ["Python", "Data Management", "Caching"] },
+
+                // Data layer
+                { id: "data-filings", name: "SEC Filings", type: "data", level: 1, description: "Raw SEC filing documents and MDA sections", tech: ["SEC Filings", "Financial Documents"] },
+                { id: "data-companies", name: "Company Data", type: "data", level: 1, description: "Company metadata, tickers, and basic information", tech: ["YAML", "Company Data"] },
+                { id: "data-mappings", name: "KPI Mappings", type: "data", level: 1, description: "Mapping configurations for KPI extraction", tech: ["YAML", "Configuration"] },
+                { id: "data-defaults", name: "Default Inputs", type: "data", level: 1, description: "Default financial inputs and presets", tech: ["JSON", "Configuration"] },
+
+                // Documentation
+                { id: "docs-readme", name: "README & Setup", type: "docs", level: 1, description: "Project documentation, setup guides, and getting started", tech: ["Markdown", "Documentation"] },
+                { id: "docs-api", name: "API Documentation", type: "docs", level: 1, description: "API endpoint documentation and integration guides", tech: ["Markdown", "API Docs"] },
+                { id: "docs-deployment", name: "Deployment Guides", type: "docs", level: 1, description: "Production deployment and infrastructure guides", tech: ["Markdown", "DevOps"] },
+                { id: "docs-calc", name: "Calculations", type: "docs", level: 1, description: "Mathematical verification and calculation methodologies", tech: ["Markdown", "Mathematics"] },
+
+                // Configuration
+                { id: "config-vercel", name: "Vercel Config", type: "config", level: 1, description: "Vercel deployment configuration for frontend", tech: ["Vercel", "JSON", "Deployment"] },
+                { id: "config-sec", name: "SEC Update Config", type: "config", level: 1, description: "Configuration for SEC data updates and processing", tech: ["YAML", "Configuration"] },
+
+                // Testing
+                { id: "tests-unit", name: "Unit Tests", type: "tests", level: 1, description: "Unit tests for core modules and functions", tech: ["Python", "Unit Testing", "pytest"] },
+                { id: "tests-integration", name: "Integration Tests", type: "tests", level: 1, description: "Integration tests for API endpoints and workflows", tech: ["Python", "Integration Testing"] },
+
+                // Deployment
+                { id: "deploy-frontend", name: "Frontend Deployment", type: "deployment", level: 1, description: "Vercel deployment for Next.js application", tech: ["Vercel", "CDN", "Serverless"] },
+                { id: "deploy-backend", name: "Backend Deployment", type: "deployment", level: 1, description: "Backend deployment (Railway/Fly.io/AWS)", tech: ["Railway", "Fly.io", "AWS", "Docker"] },
+                { id: "deploy-scripts", name: "Deployment Scripts", type: "deployment", level: 1, description: "Automation scripts for deployment and data updates", tech: ["Bash", "Python", "Automation"] }
+            ],
+
+            links: [
+                // Root connections
+                { source: "root", target: "web-app" },
+                { source: "root", target: "api-app" },
+                { source: "root", target: "core-extract" },
+                { source: "root", target: "core-valuation" },
+                { source: "root", target: "core-cite" },
+                { source: "root", target: "core-edgar" },
+                { source: "root", target: "core-xbrl" },
+                { source: "root", target: "core-data" },
+                { source: "root", target: "data-filings" },
+                { source: "root", target: "data-companies" },
+                { source: "root", target: "data-mappings" },
+                { source: "root", target: "data-defaults" },
+                { source: "root", target: "docs-readme" },
+                { source: "root", target: "docs-api" },
+                { source: "root", target: "docs-deployment" },
+                { source: "root", target: "docs-calc" },
+                { source: "root", target: "config-vercel" },
+                { source: "root", target: "config-sec" },
+                { source: "root", target: "tests-unit" },
+                { source: "root", target: "tests-integration" },
+                { source: "root", target: "deploy-frontend" },
+                { source: "root", target: "deploy-backend" },
+                { source: "root", target: "deploy-scripts" },
+
+                // Web app internal structure
+                { source: "web-app", target: "web-pages" },
+                { source: "web-app", target: "web-components" },
+                { source: "web-app", target: "web-api-routes" },
+                { source: "web-app", target: "web-hooks" },
+
+                // API app internal structure
+                { source: "api-app", target: "api-endpoints" },
+                { source: "api-app", target: "api-health" },
+
+                // API to Core dependencies
+                { source: "api-app", target: "core-extract" },
+                { source: "api-app", target: "core-valuation" },
+                { source: "api-app", target: "core-cite" },
+                { source: "api-app", target: "core-edgar" },
+                { source: "api-app", target: "core-xbrl" },
+                { source: "api-app", target: "core-data" },
+
+                // Core to Data dependencies
+                { source: "core-extract", target: "data-filings" },
+                { source: "core-extract", target: "data-mappings" },
+                { source: "core-data", target: "data-companies" },
+                { source: "core-data", target: "data-defaults" },
+                { source: "core-xbrl", target: "data-filings" },
+
+                // Frontend to API dependencies
+                { source: "web-app", target: "api-app" },
+                { source: "web-api-routes", target: "api-app" },
+
+                // Testing dependencies
+                { source: "tests-unit", target: "core-extract" },
+                { source: "tests-unit", target: "core-valuation" },
+                { source: "tests-unit", target: "core-cite" },
+                { source: "tests-integration", target: "api-app" },
+
+                // Deployment dependencies
+                { source: "deploy-frontend", target: "web-app" },
+                { source: "deploy-frontend", target: "config-vercel" },
+                { source: "deploy-backend", target: "api-app" },
+                { source: "deploy-scripts", target: "config-sec" },
+
+                // Documentation dependencies
+                { source: "docs-api", target: "api-app" },
+                { source: "docs-deployment", target: "deploy-frontend" },
+                { source: "docs-deployment", target: "deploy-backend" },
+                { source: "docs-calc", target: "core-valuation" }
+            ]
+        };
+
+        // Set up the SVG canvas
+        const svg = d3.select("#graph")
+            .append("svg")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .attr("viewBox", "0 0 1400 800");
+
+        const g = svg.append("g");
+
+        // Add zoom behavior
+        const zoom = d3.zoom()
+            .scaleExtent([0.1, 4])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoom);
+
+        // Create force simulation
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links)
+                .id(d => d.id)
+                .distance(d => {
+                    if (d.source.level === 0 || d.target.level === 0) return 150;
+                    if (d.source.level === d.target.level) return 100;
+                    return 120;
+                }))
+            .force("charge", d3.forceManyBody().strength(-300))
+            .force("center", d3.forceCenter(700, 400))
+            .force("collision", d3.forceCollide().radius(60));
+
+        // Create links
+        const link = g.append("g")
+            .selectAll("line")
+            .data(graphData.links)
+            .enter()
+            .append("line")
+            .attr("class", "link");
+
+        // Create nodes
+        const node = g.append("g")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter()
+            .append("g")
+            .attr("class", "node")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+
+        // Add circles to nodes
+        node.append("circle")
+            .attr("r", d => d.level === 0 ? 50 : d.level === 1 ? 35 : 25)
+            .attr("class", d => `node ${d.type}`)
+            .attr("fill", d => {
+                const colors = {
+                    root: "#ff6b6b",
+                    app: "#4ecdc4",
+                    core: "#45b7d1",
+                    data: "#96ceb4",
+                    docs: "#ffeaa7",
+                    config: "#dda0dd",
+                    tests: "#f7dc6f",
+                    deployment: "#bb8fce"
+                };
+                return colors[d.type] || "#ccc";
+            });
+
+        // Add labels to nodes
+        node.append("text")
+            .text(d => d.name)
+            .attr("dy", d => d.level === 0 ? 60 : d.level === 1 ? 45 : 35)
+            .attr("font-size", d => d.level === 0 ? "14px" : d.level === 1 ? "12px" : "10px")
+            .attr("font-weight", d => d.level === 0 ? "bold" : "normal");
+
+        // Add hover effects and tooltips
+        node.on("mouseover", function(event, d) {
+                const tooltip = d3.select("#tooltip");
+                tooltip.transition().duration(200).style("opacity", 1);
+                tooltip.html(`
+                    <strong>${d.name}</strong><br>
+                    <em>${d.type.replace('-', ' ').toUpperCase()}</em><br>
+                    ${d.description}
+                `)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px");
+
+                d3.select(this).select("circle")
+                    .transition()
+                    .duration(200)
+                    .attr("r", d.level === 0 ? 55 : d.level === 1 ? 40 : 30);
+            })
+            .on("mouseout", function(event, d) {
+                d3.select("#tooltip").transition().duration(200).style("opacity", 0);
+
+                d3.select(this).select("circle")
+                    .transition()
+                    .duration(200)
+                    .attr("r", d.level === 0 ? 50 : d.level === 1 ? 35 : 25);
+            })
+            .on("click", function(event, d) {
+                showInfoPanel(d);
+            });
+
+        // Update positions on simulation tick
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            node
+                .attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+        // Drag functions
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // Control functions
+        function showInfoPanel(d) {
+            const panel = d3.select("#info-panel");
+            panel.classed("show", true);
+
+            d3.select("#info-title").text(d.name);
+            d3.select("#info-description").text(d.description);
+
+            const techTags = d3.select("#tech-tags");
+            techTags.html("");
+
+            d.tech.forEach(tech => {
+                techTags.append("span")
+                    .attr("class", "tech-tag")
+                    .text(tech);
+            });
+        }
+
+        // Control event listeners
+        d3.select("#overview-btn").on("click", function() {
+            d3.selectAll(".active").classed("active", false);
+            d3.select(this).classed("active", true);
+            filterNodes("all");
+        });
+
+        d3.select("#detailed-btn").on("click", function() {
+            d3.selectAll(".active").classed("active", false);
+            d3.select(this).classed("active", true);
+            filterNodes("detailed");
+        });
+
+        d3.select("#tech-btn").on("click", function() {
+            d3.selectAll(".active").classed("active", false);
+            d3.select(this).classed("active", true);
+            filterNodes("tech");
+        });
+
+        d3.select("#focus-select").on("change", function() {
+            filterNodes(this.value);
+        });
+
+        d3.select("#reset-btn").on("click", function() {
+            simulation.alpha(1).restart();
+        });
+
+        d3.select("#center-btn").on("click", function() {
+            svg.transition().duration(750).call(
+                zoom.transform,
+                d3.zoomIdentity
+            );
+        });
+
+        function filterNodes(filter) {
+            let visibleNodes;
+            let visibleLinks;
+
+            switch(filter) {
+                case "frontend":
+                    visibleNodes = graphData.nodes.filter(d => d.id.startsWith("web") || d.id === "root");
+                    visibleLinks = graphData.links.filter(d =>
+                        visibleNodes.includes(d.source) && visibleNodes.includes(d.target)
+                    );
+                    break;
+                case "backend":
+                    visibleNodes = graphData.nodes.filter(d =>
+                        d.id.startsWith("api") || d.id.startsWith("core") || d.id === "root"
+                    );
+                    visibleLinks = graphData.links.filter(d =>
+                        visibleNodes.includes(d.source) && visibleNodes.includes(d.target)
+                    );
+                    break;
+                case "data":
+                    visibleNodes = graphData.nodes.filter(d =>
+                        d.type === "data" || d.id === "root" || d.id.startsWith("core")
+                    );
+                    visibleLinks = graphData.links.filter(d =>
+                        visibleNodes.includes(d.source) && visibleNodes.includes(d.target)
+                    );
+                    break;
+                case "deployment":
+                    visibleNodes = graphData.nodes.filter(d =>
+                        d.type === "deployment" || d.type === "config" || d.id === "root"
+                    );
+                    visibleLinks = graphData.links.filter(d =>
+                        visibleNodes.includes(d.source) && visibleNodes.includes(d.target)
+                    );
+                    break;
+                default:
+                    visibleNodes = graphData.nodes;
+                    visibleLinks = graphData.links;
+            }
+
+            // Update visibility
+            node.style("opacity", d => visibleNodes.includes(d) ? 1 : 0.1);
+            link.style("opacity", d => visibleLinks.includes(d) ? 1 : 0.1);
+
+            // Restart simulation with filtered nodes
+            simulation.nodes(visibleNodes);
+            simulation.force("link").links(visibleLinks);
+            simulation.alpha(1).restart();
+        }
+
+        // Initialize with overview
+        filterNodes("all");
+    </script>
+</body>
+</html>

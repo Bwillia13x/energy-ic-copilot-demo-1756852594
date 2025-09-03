@@ -14,6 +14,23 @@ Notes:
 - The repo no longer hardcodes `NEXT_PUBLIC_API_URL` in `vercel.json` to avoid accidental demo defaults in production.
 - Local dev examples remain in `.env.example` and `apps/web/ENV_EXAMPLE`.
 
+## Vercel Project Layout
+
+There are two supported setups for this monorepo:
+
+- Root `vercel.json` (current): The repo includes a root `vercel.json` that instructs Vercel to build `apps/web` with the Next.js builder. This is stable for CLI-based deployments and avoids mis-routed builds.
+
+  vercel.json (root):
+  {
+    "version": 2,
+    "builds": [ { "src": "apps/web/package.json", "use": "@vercel/next" } ],
+    "routes": [ { "src": "/(.*)", "dest": "apps/web/$1" } ]
+  }
+
+- Root Directory = `apps/web` (alternative): Configure in Vercel Project Settings and remove the root `vercel.json`. This also works well but requires editing settings in the Vercel UI.
+
+Pick one approach and keep it consistent. The current repo uses the root `vercel.json` approach.
+
 ## Vercel Deploy Hook (optional)
 
 If you want CI to trigger a Vercel deployment after successful tests/builds:
@@ -41,4 +58,3 @@ If a Vercel token or deploy hook was exposed:
 - Configure `NEXT_PUBLIC_API_URL` via CI secrets/vars or Vercel env.
 - Use a Vercel deploy hook only if you want CI-triggered deployments.
 - Rotate and update secrets immediately if exposed.
-

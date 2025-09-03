@@ -77,13 +77,15 @@ npm start
 
 ### Vercel (Frontend) + Railway/Fly.io (Backend)
 
-1. **Deploy Frontend to Vercel:**
+1. **Use repo root `vercel.json` (current config) OR set Root Directory to `apps/web` in Vercel UI.** The repo currently uses the root `vercel.json` monorepo setup.
+
+2. **Deploy Frontend to Vercel:**
    ```bash
-   cd apps/web
+   # From repo root (monorepo vercel.json)
    npx vercel --prod
    ```
 
-2. **Deploy Backend to Railway:**
+3. **Deploy Backend to Railway:**
    ```bash
    cd apps/api
    railway login

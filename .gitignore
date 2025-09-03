@@ -33,3 +33,4 @@ coverage/
 
 # Local notes (avoid leaking tokens)
 vercel info.md
+.env*.local

@@ -1,0 +1,53 @@
+name: Deploy API to Railway (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Railway Environment (e.g., production)"
+        default: "production"
+        required: false
+      service:
+        description: "Railway Service Name"
+        default: "api"
+        required: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+      RAILWAY_ENVIRONMENT: ${{ github.event.inputs.environment }}
+      RAILWAY_SERVICE: ${{ github.event.inputs.service }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: |
+          npm i -g @railway/cli
+
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          if [ -z "${RAILWAY_TOKEN:-}" ]; then echo "RAILWAY_TOKEN missing" >&2; exit 1; fi
+          if [ -z "${RAILWAY_PROJECT_ID:-}" ]; then echo "RAILWAY_PROJECT_ID missing" >&2; exit 1; fi
+
+      - name: Deploy API service
+        working-directory: apps/api
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          # Ensure Python deps lock
+          echo "Using Railway project: $RAILWAY_PROJECT_ID, service: ${RAILWAY_SERVICE:-api}"
+          railway up --project $RAILWAY_PROJECT_ID --service ${RAILWAY_SERVICE:-api}
+
+      - name: Output next steps
+        run: |
+          echo "If this is the first deploy, open Railway UI to find the public domain and set NEXT_PUBLIC_API_URL in Vercel to that URL."
+
