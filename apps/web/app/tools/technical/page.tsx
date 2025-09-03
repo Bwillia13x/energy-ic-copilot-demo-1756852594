@@ -15,6 +15,18 @@ import { ArrowLeft, TrendingUp, BarChart3, LineChart, Activity, Target } from 'l
 import { Chart } from '@/components/ui/chart'
 import { LineChart as RechartsLineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { formatCurrency, formatNumber } from '@/lib/utils'
+import { fetchJsonWithRetry } from '@/lib/http'
+
+interface XbrlMeta { form?: string; end?: string; frame?: string; filed?: string; unit?: string; raw_value?: number | null }
+interface XbrlResponse {
+  ticker: string
+  cik: string
+  metrics_millions: Record<string, number | null>
+  facts_meta: Record<string, XbrlMeta | null>
+  source: string
+  retrieved_at: string
+  period_preference?: string
+}
 
 // Mock technical data - in a real app, this would come from a financial data API
 const generateMockPriceData = (ticker: string, days: number = 90) => {
@@ -83,6 +95,8 @@ export default function TechnicalAnalysisPage() {
   const [timeframe, setTimeframe] = useState<'1M' | '3M' | '6M' | '1Y'>('3M')
   const [chartType, setChartType] = useState<'price' | 'volume' | 'indicators'>('price')
   const [priceData, setPriceData] = useState<any[]>([])
+  const [xbrl, setXbrl] = useState<XbrlResponse | null>(null)
+  const [xbrlPeriod, setXbrlPeriod] = useState<'any'|'ytd'|'qtd'>('any')
 
   // Load data when ticker or timeframe changes
   useEffect(() => {
@@ -90,6 +104,21 @@ export default function TechnicalAnalysisPage() {
     const data = generateMockPriceData(selectedTicker, days)
     setPriceData(data)
   }, [selectedTicker, timeframe])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetchJsonWithRetry<XbrlResponse>(
+          `${process.env.NEXT_PUBLIC_API_URL}/xbrl/KMI?period=${xbrlPeriod}`,
+          undefined,
+          { timeoutMs: 8000, retries: 2, backoffMs: 500 }
+        )
+        setXbrl(res)
+      } catch {
+        setXbrl(null)
+      }
+    })()
+  }, [xbrlPeriod])
 
   const toggleIndicator = (indicatorId: string) => {
     setSelectedIndicators(prev =>
@@ -366,6 +395,39 @@ export default function TechnicalAnalysisPage() {
         </Card>
       </div>
 
+      {/* Compact XBRL Sidebar */}
+      <Card className="mt-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>SEC XBRL (KMI)</CardTitle>
+            <div className="flex items-center gap-1" role="group" aria-label="XBRL period selector">
+              {(['any','ytd','qtd'] as const).map(p => (
+                <Button key={p} size="sm" variant={xbrlPeriod===p?'default':'outline'} onClick={() => setXbrlPeriod(p)} aria-pressed={xbrlPeriod===p}>{p.toUpperCase()}</Button>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {xbrl ? (
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {(['ebitda','net_income','interest_expense','net_debt'] as const).map(key => {
+                const val = xbrl.metrics_millions[key]
+                const meta = xbrl.facts_meta[key]
+                return (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="text-muted-foreground capitalize">{key.replace('_',' ')}</span>
+                    <span className="font-mono" title={`${meta?.form||'—'} / ${meta?.end||'—'} / ${meta?.frame||'—'}`}>{val!=null ? val.toLocaleString() : '-'}</span>
+                  </div>
+                )
+              })}
+              <div className="col-span-2 text-xs text-muted-foreground pt-1">Pref: {xbrl.period_preference||'ANY'} • <a className="underline" href={`https://data.sec.gov/api/xbrl/companyfacts/CIK${(xbrl.cik||'').padStart(10,'0')}.json`} target="_blank" rel="noreferrer noopener">Companyfacts</a></div>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">Structured metrics unavailable</div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Additional Analysis */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         {/* Price Statistics */}
@@ -441,5 +503,4 @@ export default function TechnicalAnalysisPage() {
     </div>
   )
 }
-
 

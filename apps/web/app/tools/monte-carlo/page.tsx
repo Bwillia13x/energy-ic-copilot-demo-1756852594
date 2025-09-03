@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 // Force dynamic rendering to avoid SSR context issues
 export const dynamic = 'force-dynamic'
@@ -16,6 +16,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Chart } from '@/components/ui/chart'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, BarChart, Bar } from 'recharts'
 import { formatCurrency, formatNumber } from '@/lib/utils'
+import { fetchJsonWithRetry } from '@/lib/http'
+
+interface XbrlMeta { form?: string; end?: string; frame?: string; filed?: string; unit?: string; raw_value?: number | null }
+interface XbrlResponse {
+  ticker: string
+  cik: string
+  metrics_millions: Record<string, number | null>
+  facts_meta: Record<string, XbrlMeta | null>
+  source: string
+  retrieved_at: string
+  period_preference?: string
+}
 
 interface SimulationInputs {
   ebitda: number
@@ -94,6 +106,8 @@ export default function MonteCarloPage() {
   const [stats, setStats] = useState<SimulationStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [distributionData, setDistributionData] = useState<any[]>([])
+  const [xbrl, setXbrl] = useState<XbrlResponse | null>(null)
+  const [xbrlPeriod, setXbrlPeriod] = useState<'any'|'ytd'|'qtd'>('any')
 
   // Generate random normal distribution
   const randomNormal = (mean: number, std: number): number => {
@@ -103,6 +117,21 @@ export default function MonteCarloPage() {
     const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2)
     return mean + z0 * std
   }
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetchJsonWithRetry<XbrlResponse>(
+          `${process.env.NEXT_PUBLIC_API_URL}/xbrl/KMI?period=${xbrlPeriod}`,
+          undefined,
+          { timeoutMs: 8000, retries: 2, backoffMs: 500 }
+        )
+        setXbrl(res)
+      } catch {
+        setXbrl(null)
+      }
+    })()
+  }, [xbrlPeriod])
 
   // Run Monte Carlo simulation
   const runSimulation = async () => {
@@ -254,6 +283,39 @@ export default function MonteCarloPage() {
           </div>
         </div>
       </div>
+
+      {/* Compact XBRL Sidebar */}
+      <Card className="mt-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>SEC XBRL (KMI)</CardTitle>
+            <div className="flex items-center gap-1" role="group" aria-label="XBRL period selector">
+              {(['any','ytd','qtd'] as const).map(p => (
+                <Button key={p} size="sm" variant={xbrlPeriod===p?'default':'outline'} onClick={() => setXbrlPeriod(p)} aria-pressed={xbrlPeriod===p}>{p.toUpperCase()}</Button>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {xbrl ? (
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {(['ebitda','net_income','interest_expense','net_debt'] as const).map(key => {
+                const val = xbrl.metrics_millions[key]
+                const meta = xbrl.facts_meta[key]
+                return (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="text-muted-foreground capitalize">{key.replace('_',' ')}</span>
+                    <span className="font-mono" title={`${meta?.form||'—'} / ${meta?.end||'—'} / ${meta?.frame||'—'}`}>{val!=null ? val.toLocaleString() : '-'}</span>
+                  </div>
+                )
+              })}
+              <div className="col-span-2 text-xs text-muted-foreground pt-1">Pref: {xbrl.period_preference||'ANY'} • <a className="underline" href={`https://data.sec.gov/api/xbrl/companyfacts/CIK${(xbrl.cik||'').padStart(10,'0')}.json`} target="_blank" rel="noreferrer noopener">Companyfacts</a></div>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">Structured metrics unavailable</div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Input Parameters */}
@@ -561,5 +623,3 @@ export default function MonteCarloPage() {
     </div>
   )
 }
-
-

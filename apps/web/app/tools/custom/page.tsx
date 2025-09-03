@@ -18,6 +18,17 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { fetchJsonWithRetry } from '@/lib/http'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 
+interface XbrlMeta { form?: string; end?: string; frame?: string; filed?: string; unit?: string; raw_value?: number | null }
+interface XbrlResponse {
+  ticker: string
+  cik: string
+  metrics_millions: Record<string, number | null>
+  facts_meta: Record<string, XbrlMeta | null>
+  source: string
+  retrieved_at: string
+  period_preference?: string
+}
+
 interface CustomMetric {
   id: string
   name: string
@@ -87,6 +98,8 @@ export default function CustomMetricsPage() {
   const [selectedMetric, setSelectedMetric] = useState<CustomMetric | null>(null)
   const [metricResults, setMetricResults] = useState<MetricResult[]>([])
   const [loading, setLoading] = useState(false)
+  const [xbrl, setXbrl] = useState<XbrlResponse | null>(null)
+  const [xbrlPeriod, setXbrlPeriod] = useState<'any'|'ytd'|'qtd'>('any')
 
   // New metric form
   const [newMetric, setNewMetric] = useState({
@@ -100,6 +113,21 @@ export default function CustomMetricsPage() {
   useEffect(() => {
     fetchCompanies()
   }, [])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await fetchJsonWithRetry<XbrlResponse>(
+          `${process.env.NEXT_PUBLIC_API_URL}/xbrl/KMI?period=${xbrlPeriod}`,
+          undefined,
+          { timeoutMs: 8000, retries: 2, backoffMs: 500 }
+        )
+        setXbrl(res)
+      } catch {
+        setXbrl(null)
+      }
+    })()
+  }, [xbrlPeriod])
 
   const fetchCompanies = async () => {
     try {
@@ -449,6 +477,39 @@ export default function CustomMetricsPage() {
         </Card>
       </div>
 
+      {/* Compact XBRL Sidebar */}
+      <Card className="mt-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>SEC XBRL (KMI)</CardTitle>
+            <div className="flex items-center gap-1" role="group" aria-label="XBRL period selector">
+              {(['any','ytd','qtd'] as const).map(p => (
+                <Button key={p} size="sm" variant={xbrlPeriod===p?'default':'outline'} onClick={() => setXbrlPeriod(p)} aria-pressed={xbrlPeriod===p}>{p.toUpperCase()}</Button>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {xbrl ? (
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {(['ebitda','net_income','interest_expense','net_debt'] as const).map(key => {
+                const val = xbrl.metrics_millions[key]
+                const meta = xbrl.facts_meta[key]
+                return (
+                  <div key={key} className="flex items-center justify-between">
+                    <span className="text-muted-foreground capitalize">{key.replace('_',' ')}</span>
+                    <span className="font-mono" title={`${meta?.form||'—'} / ${meta?.end||'—'} / ${meta?.frame||'—'}`}>{val!=null ? val.toLocaleString() : '-'}</span>
+                  </div>
+                )
+              })}
+              <div className="col-span-2 text-xs text-muted-foreground pt-1">Pref: {xbrl.period_preference||'ANY'} • <a className="underline" href={`https://data.sec.gov/api/xbrl/companyfacts/CIK${(xbrl.cik||'').padStart(10,'0')}.json`} target="_blank" rel="noreferrer noopener">Companyfacts</a></div>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">Structured metrics unavailable</div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Formula Help */}
       <Card className="mt-6">
         <CardHeader>
@@ -504,5 +565,4 @@ export default function CustomMetricsPage() {
     </div>
   )
 }
-
 
