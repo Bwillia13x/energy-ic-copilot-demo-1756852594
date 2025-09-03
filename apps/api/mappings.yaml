@@ -1,0 +1,462 @@
+PPL:
+  EBITDA:
+    patterns: [
+      "EBITDA increased to \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "EBITDA of \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "Adjusted EBITDA of \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "Adjusted EBITDA was \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "EBITDA.*\\$([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?) million",
+      "\\$([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?).*EBITDA"
+    ]
+    unit: "CAD millions"
+    prefer: "Adjusted"
+    normalize: "strip_commas"
+
+  FFO:
+    patterns: [
+      "Funds From Operations.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "FFO of \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "funds from operations.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "Funds From Operations were \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "FFO were \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]{3})*(?:\\.[0-9]+)?)",
+      "funds from operations were \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "FFO.*\\$([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?) million"
+    ]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  NetDebt:
+    patterns: [
+      "Net Debt at.*?was\\s*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)\\s*(?:million|billion)?",
+      "Net Debt.*?was\\s*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)\\s*(?:million|billion)?",
+      "Net Debt of\\s*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)\\s*(?:million|billion)?",
+      "total debt.*net of cash.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)\\s*(?:million|billion)?",
+      "net debt position.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)\\s*(?:million|billion)?",
+      "Net\\s*Debt.*?\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)"
+    ]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  InterestExpense:
+    patterns: [
+      "interest expense.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "Interest Expense.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "finance costs.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "financing costs.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "Interest Expense.*was \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "Interest Expense for.*was \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?) million",
+      "interest.*expense.*\\$([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?) million"
+    ]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  MaintenanceCapex:
+    patterns: [
+      "maintenance capital expenditures were \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "maintenance capital.*expenditures.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)(?=.*?million)",
+      "maintenance capex.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "sustaining capital.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "maintenance expenditures.*\\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?)",
+      "maintenance capital expenditures.*were \\$?([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?) million",
+      "sustaining capex.*\\$([0-9,]+(?:,[0-9]{3})*(?:\\.[0-9]+)?) million"
+    ]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  GrowthCapex:
+    patterns: ["growth capital", "expansion capital", "growth capex", "expansion expenditures"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  SharesOut:
+    patterns: ["shares outstanding", "common shares outstanding", "weighted average shares"]
+    unit: "millions"
+    normalize: "strip_commas"
+
+  DPS:
+    patterns: ["dividend.*per share", "quarterly dividend", "annual dividend"]
+    unit: "CAD per share"
+    normalize: "strip_commas"
+
+  SharePrice:
+    patterns: ["share price.*was \\$?[0-9,]+\\.?[0-9]*", "closing price.*\\$?[0-9,]+\\.?[0-9]*", "stock price.*\\$?[0-9,]+\\.?[0-9]*"]
+    unit: "CAD"
+    normalize: "strip_commas"
+
+  NetIncome:
+    patterns: ["net income.*was \\$?[0-9,]+", "net earnings.*\\$?[0-9,]+", "profit.*\\$?[0-9,]+ million"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  ShareholderEquity:
+    patterns: ["shareholder equity.*was \\$?[0-9,]+", "equity.*\\$?[0-9,]+ million", "owners equity.*\\$?[0-9,]+"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+KMI:
+  EBITDA:
+    patterns: [
+      "Adjusted EBITDA (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "EBITDA (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "EBITDA\\s*\\(\\$?mm\\)"
+    ]
+    unit: "USD millions"
+    prefer: "Adjusted"
+    normalize: "strip_commas"
+
+  FFO:
+    patterns: [
+      "Funds From Operations(?:.*?)(?:were|was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "FFO (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "FFO\\s*\\(\\$?mm\\)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  NetDebt:
+    patterns: [
+      "Net\\s*Debt(?:.*?)(?:was|of|at)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "total debt.*net of cash.*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "Net Debt.*was\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  InterestExpense:
+    patterns: [
+      "Interest expense,?\\s*net(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "Interest Expense(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "interest expense(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "finance costs(?:.*?)(?:were|was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  MaintenanceCapex:
+    patterns: ["maintenance capital", "maintenance capex", "sustaining capital", "maintenance expenditures", "Maintenance capital expenditures were \\$?[0-9,]+", "maintenance capital expenditures.*were \\$?[0-9,]+ million"]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  GrowthCapex:
+    patterns: ["growth capital", "expansion capital", "growth capex", "expansion expenditures"]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  SharesOut:
+    patterns: ["shares outstanding", "common shares outstanding", "weighted average shares"]
+    unit: "millions"
+    normalize: "strip_commas"
+
+  DPS:
+    patterns: ["dividend.*per share", "quarterly dividend", "annual dividend"]
+    unit: "USD per share"
+    normalize: "strip_commas"
+
+OKE:
+  EBITDA:
+    patterns: [
+      "Adjusted EBITDA (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "EBITDA (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "EBITDA\\s*\\(\\$?mm\\)"
+    ]
+    unit: "USD millions"
+    prefer: "Adjusted"
+    normalize: "strip_commas"
+
+  FFO:
+    patterns: [
+      "Funds From Operations(?:.*?)(?:were|was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "FFO (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "FFO\\s*\\(\\$?mm\\)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  NetDebt:
+    patterns: [
+      "Net\\s*Debt(?:.*?)(?:was|of|at)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "total debt.*net of cash.*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "Net Debt.*was\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  InterestExpense:
+    patterns: [
+      "Interest expense,?\\s*net(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "Interest Expense(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "interest expense(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "finance costs(?:.*?)(?:were|was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+WMB:
+  EBITDA:
+    patterns: [
+      "Adjusted EBITDA (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "EBITDA (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    prefer: "Adjusted"
+    normalize: "strip_commas"
+
+  FFO:
+    patterns: [
+      "Distributable Cash Flow|DCF(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "Funds From Operations(?:.*?)(?:were|was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  NetDebt:
+    patterns: [
+      "Net\\s*Debt(?:.*?)(?:was|of|at)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  InterestExpense:
+    patterns: [
+      "Interest expense,?\\s*net(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "Interest Expense(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+ET:
+  EBITDA:
+    patterns: [
+      "Adjusted EBITDA (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "EBITDA (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    prefer: "Adjusted"
+    normalize: "strip_commas"
+
+  NetDebt:
+    patterns: [
+      "Net\\s*Debt(?:.*?)(?:was|of|at)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  InterestExpense:
+    patterns: [
+      "Interest expense,?\\s*net(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "Interest Expense(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+TRGP:
+  EBITDA:
+    patterns: [
+      "Adjusted EBITDA (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)",
+      "EBITDA (?:was|of|totaled)?\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    prefer: "Adjusted"
+    normalize: "strip_commas"
+
+  NetDebt:
+    patterns: [
+      "Net\\s*Debt(?:.*?)(?:was|of|at)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  InterestExpense:
+    patterns: [
+      "Interest Expense(?:.*?)(?:was|of|totaled)\\s*\\$?([0-9,]+(?:\\.[0-9]+)?)\\s*(?:million|billion)"
+    ]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  MaintenanceCapex:
+    patterns: ["maintenance capital", "maintenance capex", "sustaining capital", "maintenance expenditures", "Maintenance capital expenditures were \\$?[0-9,]+", "maintenance capital expenditures.*were \\$?[0-9,]+ million"]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  GrowthCapex:
+    patterns: ["growth capital", "expansion capital", "growth capex", "expansion expenditures"]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  SharesOut:
+    patterns: ["shares outstanding", "common shares outstanding", "weighted average shares"]
+    unit: "millions"
+    normalize: "strip_commas"
+
+  DPS:
+    patterns: ["dividend.*per share", "quarterly dividend", "annual dividend"]
+    unit: "USD per share"
+    normalize: "strip_commas"
+
+ENB:
+  EBITDA:
+    patterns: ["EBITDA\\s*\\(\\$?mm\\)", "Adjusted EBITDA", "EBITDA of \\$?[0-9,]+", "earnings before interest"]
+    unit: "CAD millions"
+    prefer: "Adjusted"
+    normalize: "strip_commas"
+
+  FFO:
+    patterns: ["Funds From Operations", "FFO\\s*\\(\\$?mm\\)", "FFO of \\$?[0-9,]+", "funds from operations"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  NetDebt:
+    patterns: ["Net\\s*Debt", "net debt", "Net Debt of \\$?[0-9,]+", "total debt.*net of cash"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  InterestExpense:
+    patterns: ["interest expense", "Interest expense, net", "Interest Expense", "finance costs", "financing costs", "Interest Expense.*was \\$?[0-9,]+", "Interest Expense for.*was \\$?[0-9,]+ million"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  MaintenanceCapex:
+    patterns: ["maintenance capital", "maintenance capex", "sustaining capital", "maintenance expenditures", "Maintenance capital expenditures were \\$?[0-9,]+", "maintenance capital expenditures.*were \\$?[0-9,]+ million"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  GrowthCapex:
+    patterns: ["growth capital", "expansion capital", "growth capex", "expansion expenditures"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  SharesOut:
+    patterns: ["shares outstanding", "common shares outstanding", "weighted average shares"]
+    unit: "millions"
+    normalize: "strip_commas"
+
+  DPS:
+    patterns: ["dividend.*per share", "quarterly dividend", "annual dividend"]
+    unit: "CAD per share"
+    normalize: "strip_commas"
+
+TRP:
+  EBITDA:
+    patterns: ["EBITDA\\s*\\(\\$?mm\\)", "Adjusted EBITDA", "EBITDA of \\$?[0-9,]+", "earnings before interest"]
+    unit: "CAD millions"
+    prefer: "Adjusted"
+    normalize: "strip_commas"
+
+  FFO:
+    patterns: ["Funds From Operations", "FFO\\s*\\(\\$?mm\\)", "FFO of \\$?[0-9,]+", "funds from operations"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  NetDebt:
+    patterns: ["Net\\s*Debt", "net debt", "Net Debt of \\$?[0-9,]+", "total debt.*net of cash"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  InterestExpense:
+    patterns: ["interest expense", "Interest Expense", "finance costs", "financing costs", "Interest Expense.*was \\$?[0-9,]+", "Interest Expense for.*was \\$?[0-9,]+ million"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  MaintenanceCapex:
+    patterns: ["maintenance capital", "maintenance capex", "sustaining capital", "maintenance expenditures", "Maintenance capital expenditures were \\$?[0-9,]+", "maintenance capital expenditures.*were \\$?[0-9,]+ million"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  GrowthCapex:
+    patterns: ["growth capital", "expansion capital", "growth capex", "expansion expenditures"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  SharesOut:
+    patterns: ["shares outstanding", "common shares outstanding", "weighted average shares"]
+    unit: "millions"
+    normalize: "strip_commas"
+
+  DPS:
+    patterns: ["dividend.*per share", "quarterly dividend", "annual dividend"]
+    unit: "CAD per share"
+    normalize: "strip_commas"
+
+KEY:
+  EBITDA:
+    patterns: ["EBITDA\\s*\\(\\$?mm\\)", "Adjusted EBITDA", "EBITDA of \\$?[0-9,]+", "earnings before interest"]
+    unit: "CAD millions"
+    prefer: "Adjusted"
+    normalize: "strip_commas"
+
+  FFO:
+    patterns: ["Funds From Operations", "FFO\\s*\\(\\$?mm\\)", "FFO of \\$?[0-9,]+", "funds from operations"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  NetDebt:
+    patterns: ["Net\\s*Debt", "net debt", "Net Debt of \\$?[0-9,]+", "total debt.*net of cash"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  InterestExpense:
+    patterns: ["interest expense", "Interest Expense", "finance costs", "financing costs", "Interest Expense.*was \\$?[0-9,]+", "Interest Expense for.*was \\$?[0-9,]+ million"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  MaintenanceCapex:
+    patterns: ["maintenance capital", "maintenance capex", "sustaining capital", "maintenance expenditures", "Maintenance capital expenditures were \\$?[0-9,]+", "maintenance capital expenditures.*were \\$?[0-9,]+ million"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  GrowthCapex:
+    patterns: ["growth capital", "expansion capital", "growth capex", "expansion expenditures"]
+    unit: "CAD millions"
+    normalize: "strip_commas"
+
+  SharesOut:
+    patterns: ["shares outstanding", "common shares outstanding", "weighted average shares"]
+    unit: "millions"
+    normalize: "strip_commas"
+
+  DPS:
+    patterns: ["dividend.*per share", "quarterly dividend", "annual dividend"]
+    unit: "CAD per share"
+    normalize: "strip_commas"
+
+MMP:
+  EBITDA:
+    patterns: ["EBITDA\\s*\\(\\$?mm\\)", "Adjusted EBITDA", "EBITDA of \\$?[0-9,]+", "earnings before interest"]
+    unit: "USD millions"
+    prefer: "Adjusted"
+    normalize: "strip_commas"
+
+  FFO:
+    patterns: ["Funds From Operations", "FFO\\s*\\(\\$?mm\\)", "FFO of \\$?[0-9,]+", "funds from operations"]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  NetDebt:
+    patterns: ["Net\\s*Debt", "net debt", "Net Debt of \\$?[0-9,]+", "total debt.*net of cash"]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  InterestExpense:
+    patterns: ["interest expense", "Interest Expense", "finance costs", "financing costs", "Interest Expense.*was \\$?[0-9,]+", "Interest Expense for.*was \\$?[0-9,]+ million"]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  MaintenanceCapex:
+    patterns: ["maintenance capital", "maintenance capex", "sustaining capital", "maintenance expenditures", "Maintenance capital expenditures were \\$?[0-9,]+", "maintenance capital expenditures.*were \\$?[0-9,]+ million"]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  GrowthCapex:
+    patterns: ["growth capital", "expansion capital", "growth capex", "expansion expenditures"]
+    unit: "USD millions"
+    normalize: "strip_commas"
+
+  SharesOut:
+    patterns: ["shares outstanding", "common shares outstanding", "weighted average shares"]
+    unit: "millions"
+    normalize: "strip_commas"
+
+  DPS:
+    patterns: ["dividend.*per share", "quarterly dividend", "annual dividend"]
+    unit: "USD per share"
+    normalize: "strip_commas"

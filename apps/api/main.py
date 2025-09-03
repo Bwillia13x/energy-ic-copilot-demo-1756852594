@@ -39,15 +39,19 @@ app = FastAPI(
 # Environment-based CORS configuration
 
 def get_cors_origins():
-    """Get CORS allowed origins based on environment."""
+    """Get CORS allowed origins based on environment or ALLOWED_ORIGINS env."""
+    # Highest priority: explicit comma-separated origins
+    allowed = os.getenv("ALLOWED_ORIGINS")
+    if allowed:
+        return [o.strip() for o in allowed.split(",") if o.strip()]
+
     env = os.getenv("ENVIRONMENT", "development").lower()
 
     if env == "production":
-        # Strict allowlist for production
+        # Default allowlist for production (customize via ALLOWED_ORIGINS)
         return [
-            "https://energy-ic-copilot-demo.vercel.app",
-            "https://energy-ic-copilot-demo-1756852594.vercel.app",
-            "https://energy-ic-copilot-demo-1756852594-*.vercel.app",
+            "https://energy-ic-copilot.vercel.app",
+            "https://energy-ic-copilot-*.vercel.app",
         ]
     elif env == "staging":
         # More permissive for staging
@@ -296,4 +300,5 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)

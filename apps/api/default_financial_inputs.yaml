@@ -1,0 +1,49 @@
+# Centralized Financial Data Configuration
+# This file contains all default financial inputs used across the application
+# Source: Pembina Pipeline Corporation (TSX:PPL) Q2 2024 MD&A
+# Updated: To prevent data inconsistencies across components
+
+# Core Financial Metrics (from PPL Q2 2024 filing)
+ppl_financial_data:
+  ebitda: 3450                    # $3.45B - Adjusted EBITDA
+  net_debt: 18750                 # $18.75B - Net Debt
+  maintenance_capex: 220          # $220M - Maintenance capital expenditures (CORRECTED)
+  net_income: 1250                # $1.25B - Net income
+  shareholder_equity: 16750       # $16.75B - Shareholder equity
+  interest_expense: 380           # $380M - Interest expense
+  total_assets: 36550             # $36.55B - Total capital employed (proxy)
+  shares_outstanding: 572         # 572M shares outstanding
+
+# Market Assumptions (industry standard for energy infrastructure)
+market_assumptions:
+  risk_free_rate: 0.04            # 4% - 10-year Treasury yield
+  market_risk_premium: 0.06       # 6% - Equity risk premium
+  beta: 0.8                       # 0.8 - Energy infrastructure beta
+  cost_of_debt: 0.05              # 5% - Pre-tax cost of debt
+  tax_rate: 0.25                  # 25% - Effective corporate tax rate
+  reinvestment_rate: 0.15         # 15% - NOPAT reinvestment rate
+  terminal_growth: 0.02           # 2% - Long-term growth rate
+
+# Capital Structure (calculated from PPL data)
+capital_structure:
+  debt_weight: 0.528              # 52.8% debt in capital structure (calculated from actual data)
+  equity_weight: 0.472            # 47.2% equity in capital structure (calculated from actual data)
+
+# Simulation Parameters (for Monte Carlo)
+simulation_defaults:
+  ebitda_volatility: 0.15         # 15% EBITDA volatility
+  beta_volatility: 0.1            # 0.1 beta volatility
+  risk_premium_volatility: 0.02   # 2% market risk premium volatility
+  terminal_growth_volatility: 0.005 # 0.5% terminal growth volatility
+  num_simulations: 1000           # Default simulation count
+  confidence_level: 0.95          # 95% confidence for VaR
+
+# Metadata
+metadata:
+  source: "Pembina Pipeline Corporation (TSX:PPL) Q2 2024 MD&A"
+  update_date: "2024-07-01"
+  version: "1.1"
+  notes:
+    - "Maintenance capex corrected from $345M to $220M based on filing data"
+    - "This file serves as single source of truth for financial inputs"
+    - "All components should import from this file to ensure consistency"

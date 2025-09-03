@@ -1,0 +1,95 @@
+PPL:
+  name: "Pembina Pipeline Corporation"
+  ticker: "PPL"
+  currency: "CAD"
+  fiscal_year_end: "December 31"
+  sector: "Midstream Energy"
+  country: "Canada"
+
+ENB:
+  name: "Enbridge Inc."
+  ticker: "ENB"
+  currency: "CAD"
+  fiscal_year_end: "December 31"
+  sector: "Midstream Energy"
+  country: "Canada"
+
+TRP:
+  name: "TC Energy Corporation"
+  ticker: "TRP"
+  currency: "CAD"
+  fiscal_year_end: "December 31"
+  sector: "Midstream Energy"
+  country: "Canada"
+
+KEY:
+  name: "Keyera Corp."
+  ticker: "KEY"
+  currency: "CAD"
+  fiscal_year_end: "December 31"
+  sector: "Midstream Energy"
+  country: "Canada"
+
+MMP:
+  name: "Magellan Midstream Partners, L.P."
+  ticker: "MMP"
+  currency: "USD"
+  fiscal_year_end: "December 31"
+  sector: "Midstream Energy"
+  country: "United States"
+
+KMI:
+  name: "Kinder Morgan, Inc."
+  ticker: "KMI"
+  currency: "USD"
+  fiscal_year_end: "December 31"
+  sector: "Midstream Energy"
+  country: "United States"
+
+OKE:
+  name: "ONEOK, Inc."
+  ticker: "OKE"
+  currency: "USD"
+  fiscal_year_end: "December 31"
+  sector: "Midstream Energy"
+  country: "United States"
+
+WMB:
+  name: "The Williams Companies, Inc."
+  ticker: "WMB"
+  currency: "USD"
+  fiscal_year_end: "December 31"
+  sector: "Midstream Energy"
+  country: "United States"
+
+ET:
+  name: "Energy Transfer LP"
+  ticker: "ET"
+  currency: "USD"
+  fiscal_year_end: "December 31"
+  sector: "Midstream Energy"
+  country: "United States"
+
+TRGP:
+  name: "Targa Resources Corp."
+  ticker: "TRGP"
+  currency: "USD"
+  fiscal_year_end: "December 31"
+  sector: "Midstream Energy"
+  country: "United States"
+
+PSX:
+  name: "Phillips 66"
+  ticker: "PSX"
+  currency: "USD"
+  fiscal_year_end: "December 31"
+  sector: "Oil & Gas Refining/Marketing"
+  country: "United States"
+
+SU:
+  name: "Suncor Energy Inc."
+  ticker: "SU"
+  currency: "CAD"
+  fiscal_year_end: "December 31"
+  sector: "Integrated Oil & Gas"
+  country: "Canada"
