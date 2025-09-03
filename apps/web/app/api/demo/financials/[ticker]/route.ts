@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
-interface Params { params: { ticker: string } }
 
-function loadInputs(): any {
+
+function loadInputs(): Record<string, unknown> {
   // Next app runs with cwd at apps/web; project data lives at ../../data
   const filePath = path.resolve(process.cwd(), '..', '..', 'data', 'demo_initial_inputs.json')
   const raw = fs.readFileSync(filePath, 'utf-8')
@@ -22,9 +22,9 @@ async function fetchFxRate(base: string, to: string, method: string, date?: stri
       const url = `https://api.exchangerate.host/timeseries?start_date=${start}&end_date=${end}&base=${base}&symbols=${to}`
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
       if (!res.ok) throw new Error(`FX timeseries fetch failed: ${res.status}`)
-      const data: any = await res.json()
-      const rates = data?.rates || {}
-      const vals: number[] = Object.values(rates).map((r: any) => r?.[to]).filter((x: any) => typeof x === 'number') as number[]
+      const data: Record<string, unknown> = await res.json()
+      const rates = (data?.rates as Record<string, unknown>) || {}
+      const vals: number[] = Object.values(rates).map((r: unknown) => (r as Record<string, number>)?.[to]).filter((x: unknown) => typeof x === 'number') as number[]
       if (!vals.length) throw new Error('No FX data points')
       const avg = vals.reduce((a, b) => a + b, 0) / vals.length
       return { rate: avg, method: 'fyavg', source: 'exchangerate.host', start, end }
@@ -33,23 +33,23 @@ async function fetchFxRate(base: string, to: string, method: string, date?: stri
       const url = `https://api.exchangerate.host/${d}?base=${base}&symbols=${to}`
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
       if (!res.ok) throw new Error(`FX daily fetch failed: ${res.status}`)
-      const data: any = await res.json()
-      const rate = data?.rates?.[to]
+      const data: Record<string, unknown> = await res.json()
+      const rate = (data?.rates as Record<string, number>)?.[to]
       if (typeof rate !== 'number') throw new Error('Invalid FX rate')
       return { rate, method: 'spot', source: 'exchangerate.host', date: d }
     }
-  } catch (e) {
+  } catch {
     return null
   }
 }
 
-export async function GET(req: Request, { params }: Params) {
+export async function GET(req: Request, { params }: { params: { ticker: string } }) {
   const key = (params.ticker || '').toUpperCase()
   const data = loadInputs()
-  const item = data[key]
+  const item = data[key] as Record<string, unknown>
   if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const trace: any[] = []
+  const trace: Array<Record<string, unknown>> = []
 
   // Derived metrics: gross debt and net debt (with and without leases when applicable)
   let grossDebtExclLeases: number | null = null
@@ -60,10 +60,10 @@ export async function GET(req: Request, { params }: Params) {
   const cash = item.cash_and_equivalents ?? null
 
   if (key === 'PSX') {
-    const short = item.short_term_debt ?? null
-    const long = item.long_term_debt ?? null
-    if (short != null && long != null) {
-      grossDebtExclLeases = short + long
+          const short = item.short_term_debt ?? null
+      const long = item.long_term_debt ?? null
+      if (typeof short === 'number' && typeof long === 'number') {
+        grossDebtExclLeases = short + long
       trace.push({
         name: 'Gross debt (excl. leases)',
         formula: 'short_term_debt + long_term_debt',
@@ -79,8 +79,8 @@ export async function GET(req: Request, { params }: Params) {
     const currentPortion = item.current_portion_long_term_debt ?? 0
     const long = item.long_term_debt ?? 0
     const leases = item.long_term_lease_liabilities ?? 0
-    grossDebtExclLeases = (currentPortion != null && long != null) ? (currentPortion + long) : null
-    grossDebtInclLeases = (grossDebtExclLeases != null) ? (grossDebtExclLeases + (leases || 0)) : null
+    grossDebtExclLeases = (typeof currentPortion === 'number' && typeof long === 'number') ? (currentPortion + long) : null
+    grossDebtInclLeases = (typeof grossDebtExclLeases === 'number') ? (grossDebtExclLeases + (typeof leases === 'number' ? leases : 0)) : null
 
     if (grossDebtExclLeases != null) {
       trace.push({
@@ -110,7 +110,7 @@ export async function GET(req: Request, { params }: Params) {
     const st = item.short_term_debt ?? null
     const lt = item.long_term_debt ?? null
     if (tDebt != null) {
-      grossDebtExclLeases = tDebt
+      grossDebtExclLeases = typeof tDebt === 'number' ? tDebt : null
       trace.push({
         name: 'Gross debt (total carrying amount)',
         formula: 'total_debt (DebtInstrumentCarryingAmount)',
@@ -144,7 +144,7 @@ export async function GET(req: Request, { params }: Params) {
 
   // Net debt calculations where possible
   if (cash != null && grossDebtExclLeases != null) {
-    netDebtExclLeases = grossDebtExclLeases - cash
+    netDebtExclLeases = (typeof grossDebtExclLeases === 'number' && typeof cash === 'number') ? grossDebtExclLeases - cash : null
     trace.push({
       name: 'Net debt (excl. leases)',
       formula: 'gross_debt_excl_leases - cash_and_equivalents',
@@ -156,7 +156,7 @@ export async function GET(req: Request, { params }: Params) {
   }
 
   if (cash != null && grossDebtInclLeases != null) {
-    netDebtInclLeases = grossDebtInclLeases - cash
+    netDebtInclLeases = (typeof grossDebtInclLeases === 'number' && typeof cash === 'number') ? grossDebtInclLeases - cash : null
     trace.push({
       name: 'Net debt (incl. leases)',
       formula: 'gross_debt_incl_leases - cash_and_equivalents',
@@ -181,20 +181,20 @@ export async function GET(req: Request, { params }: Params) {
   const method = (url.searchParams.get('method') || 'fyavg').toLowerCase()
   const date = url.searchParams.get('date') || (item.fiscal_year_end || '')
 
-  let fx: any = null
-  let auditedOut: any = { ...item }
-  let derivedOut: any = { ...derived }
+  let fx: Record<string, unknown> | null = null
+  let auditedOut: Record<string, unknown> = { ...item }
+  let derivedOut: Record<string, unknown> = { ...derived }
 
-  const convertNumeric = (obj: any, rate: number) => {
+  const convertNumeric = (obj: Record<string, unknown>, rate: number) => {
     const numericKeys = new Set<string>([
       'revenues_total', 'net_income_attrib_parent', 'net_earnings', 'cash_from_operations',
       'capital_expenditures_additions', 'capital_and_exploration_expenditures', 'total_assets',
       'total_liabilities', 'short_term_debt', 'long_term_debt', 'total_debt', 'cash_and_equivalents',
       'equity', 'total_current_liabilities', 'current_portion_long_term_debt', 'long_term_lease_liabilities'
     ])
-    const out: any = Array.isArray(obj) ? [] : { ...obj }
+    const out: Record<string, unknown> = Array.isArray(obj) ? {} : { ...obj }
     for (const k of Object.keys(obj)) {
-      const v = (obj as any)[k]
+      const v = obj[k]
       if (v == null) { out[k] = v; continue }
       if (numericKeys.has(k) && typeof v === 'number') {
         out[k] = v * rate
@@ -205,8 +205,8 @@ export async function GET(req: Request, { params }: Params) {
     return out
   }
 
-  const convertDerived = (obj: any, rate: number) => {
-    const out: any = {}
+  const convertDerived = (obj: Record<string, unknown>, rate: number) => {
+    const out: Record<string, unknown> = {}
     for (const k of Object.keys(obj)) {
       const v = obj[k]
       out[k] = (typeof v === 'number') ? v * rate : v
@@ -218,12 +218,12 @@ export async function GET(req: Request, { params }: Params) {
     let rate: number | null = null
     if (fxOverride && !Number.isNaN(Number(fxOverride))) {
       rate = Number(fxOverride)
-      fx = { rate, method: 'override', source: 'query', to, from: item.currency }
+      fx = { rate, method: 'override', source: 'query', to, from: typeof item.currency === 'string' ? item.currency : 'USD' }
     } else {
-      const fetched = await fetchFxRate(item.currency, to, method, date)
+      const fetched = await fetchFxRate(typeof item.currency === 'string' ? item.currency : 'USD', typeof to === 'string' ? to : 'USD', typeof method === 'string' ? method : 'fyavg', typeof date === 'string' ? date : undefined)
       if (fetched) {
         rate = fetched.rate
-        fx = { ...fetched, to, from: item.currency }
+        fx = { ...fetched, to, from: typeof item.currency === 'string' ? item.currency : 'USD' }
       }
     }
     if (rate) {
@@ -233,7 +233,7 @@ export async function GET(req: Request, { params }: Params) {
       trace.push({
         name: 'FX conversion',
         formula: `${item.currency} → ${to}: multiply values by rate`,
-        inputs: { from: item.currency, to, rate, method: fx.method },
+        inputs: { from: typeof item.currency === 'string' ? item.currency : 'USD', to, rate, method: fx?.method || 'unknown' },
         rationale: 'Converted audited and derived figures for display parity.'
       })
     }

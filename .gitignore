@@ -30,3 +30,6 @@ venv/
 coverage/
 
 .vercel
+
+# Local notes (avoid leaking tokens)
+vercel info.md

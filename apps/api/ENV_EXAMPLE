@@ -1,0 +1,8 @@
+# API environment example
+ENVIRONMENT=development
+PORT=8000
+
+# Paths (override as needed)
+DATA_DIR=../../data
+MAPPINGS_PATH=../../data/mappings.yaml
+COMPANIES_PATH=../../data/companies.yaml

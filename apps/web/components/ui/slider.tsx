@@ -4,7 +4,10 @@ import * as React from "react"
 import * as SliderPrimitive from "@radix-ui/react-slider"
 import { cn } from "@/lib/utils"
 
-interface SliderProps extends React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface SliderProps extends React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> {
+  // Interface for future extension of slider props
+}
 
 const Slider = React.forwardRef<React.ElementRef<typeof SliderPrimitive.Root>, SliderProps>(
   ({ className, ...props }, ref) => (

@@ -1,0 +1,8 @@
+# Copy to .env.local for local dev
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_DEMO=0
+NEXT_PUBLIC_REPO_URL=https://github.com/
+
+# Optional monitoring
+SENTRY_DSN=
+NEXT_PUBLIC_SENTRY_DSN=

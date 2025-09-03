@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
+      headless: chromium.headless as boolean,
     })
 
     const page = await browser.newPage()
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     await browser.close()
 
     // Return PDF
-    return new NextResponse(pdfBuffer as any, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': 'attachment; filename="ic-memo.pdf"',
@@ -52,10 +52,16 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('PDF generation error:', error)
 
+    // Check if it's a Chromium executable path issue
+    const isChromiumError = error instanceof Error && error.message.includes('executablePath')
+
     return NextResponse.json({
       error: 'Failed to generate PDF',
-      message: 'PDF generation is not available in this environment. Please use "Print to PDF" in your browser.',
-      fallback: 'print'
+      message: isChromiumError
+        ? 'PDF generation requires additional setup. Please use "Print to PDF" in your browser.'
+        : 'PDF generation is not available in this environment. Please use "Print to PDF" in your browser.',
+      fallback: 'print',
+      details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : String(error) : undefined
     }, { status: 500 })
   }
 }

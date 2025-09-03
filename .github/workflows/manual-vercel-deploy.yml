@@ -1,0 +1,88 @@
+name: Manual Vercel Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      prod:
+        description: "Deploy to production?"
+        required: false
+        default: "true"
+      prebuilt:
+        description: "Use prebuilt artifacts (build in CI)?"
+        required: false
+        default: "false"
+      api_url:
+        description: "Override NEXT_PUBLIC_API_URL for this run"
+        required: false
+        default: ""
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Provided by repo/Org secrets; do NOT hardcode tokens
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      INPUT_API_URL: ${{ github.event.inputs.api_url }}
+      SECRET_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+      VARS_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+      PROD: ${{ github.event.inputs.prod }}
+      PREBUILT: ${{ github.event.inputs.prebuilt }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install deps (web)
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Build (only if prebuilt=true)
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_API_URL: ${{ github.event.inputs.api_url }}
+        run: |
+          set -euo pipefail
+          # Resolve API URL precedence: input > secret > var > empty
+          export NEXT_PUBLIC_API_URL="${INPUT_API_URL:-${SECRET_API_URL:-${VARS_API_URL:-}}}"
+          if [ "${PREBUILT:-false}" = "true" ]; then
+            echo "Building locally for prebuilt deploy..."
+            npm run build
+          else
+            echo "Skipping local build (remote build on Vercel)"
+          fi
+
+      - name: Deploy to Vercel
+        working-directory: apps/web
+        run: |
+          set -euo pipefail
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "VERCEL_TOKEN is not set. Add it as a GitHub Secret." >&2
+            exit 1
+          fi
+
+          export NEXT_PUBLIC_API_URL="${INPUT_API_URL:-${SECRET_API_URL:-${VARS_API_URL:-}}}"
+
+          # Determine flags
+          FLAGS=""
+          if [ "${PROD:-true}" = "true" ]; then
+            FLAGS="$FLAGS --prod"
+          fi
+
+          if [ "${PREBUILT:-false}" = "true" ]; then
+            echo "Deploying prebuilt artifacts to Vercel..."
+            # Use Vercel's prebuilt flow from the local build
+            npx --yes vercel deploy --prebuilt $FLAGS --token "$VERCEL_TOKEN"
+          else
+            echo "Deploying with remote build on Vercel..."
+            # Let Vercel build remotely using the repo
+            npx --yes vercel deploy $FLAGS --token "$VERCEL_TOKEN"
+          fi
+

@@ -80,7 +80,7 @@ interface ValuationResults {
   interest_coverage?: number
   scenario_epv?: number
   scenario_dcf?: number
-  dcf_components: any
+  dcf_components: Record<string, unknown>
 }
 
 interface XbrlMeta {
@@ -122,7 +122,7 @@ export default function CompanyPage() {
     if (ticker) {
       fetchCompanyData()
     }
-  }, [ticker])
+  }, [ticker]) // fetchCompanyData is stable due to useCallback
 
   useEffect(() => {
     if (!ticker) return
@@ -135,7 +135,7 @@ export default function CompanyPage() {
           { timeoutMs: 8000, retries: 2, backoffMs: 500 }
         )
         setXbrl(res)
-      } catch (e: any) {
+      } catch {
         setXbrl(null)
         setXbrlError('XBRL metrics unavailable')
       }
@@ -172,7 +172,7 @@ export default function CompanyPage() {
             title: "✅ Data Loaded Successfully",
             description: `Found ${Object.keys(kpiData.kpis).length} KPIs for ${companyData.name}`,
           })
-        } catch (kpiError: any) {
+        } catch (kpiError: unknown) {
           if (kpiError instanceof HttpError && kpiError.status === 404) {
             console.warn(`No KPIs found for ${ticker}`)
             setKpis(null)
@@ -250,7 +250,7 @@ export default function CompanyPage() {
 
     setValuationInputs(inputs)
     calculateValuation(inputs)
-  }, [])
+  }, []) // calculateValuation depends only on stable ticker prop
 
   const calculateValuation = async (inputs: ValuationInputs) => {
     startLoading('Calculating valuation...')
@@ -431,7 +431,7 @@ export default function CompanyPage() {
                 </div>
               ) : formattedKPIs.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4" role="list" aria-label="Key performance indicators">
-                  {formattedKPIs.map(({ key, kpi, formattedValue, isPercentage }) => (
+                  {formattedKPIs.map(({ key, kpi, formattedValue }) => (
                     <article
                       key={key}
                       className="group relative p-5 border rounded-xl hover:shadow-lg hover:border-primary/20 transition-all duration-300 bg-gradient-to-br from-background to-muted/5"
@@ -485,7 +485,7 @@ export default function CompanyPage() {
                   </div>
                   <h3 className="text-lg font-semibold mb-2">No KPIs Available</h3>
                   <p className="text-muted-foreground mb-4 max-w-sm mx-auto">
-                    We couldn't extract any key performance indicators from the available documents for {ticker}.
+                    We couldn&apos;t extract any key performance indicators from the available documents for {ticker}.
                   </p>
                   <Button
                     variant="outline"
@@ -711,7 +711,7 @@ export default function CompanyPage() {
                                 <span>{meta.end || '—'}</span>
                                 {meta.frame ? <span className="text-xs">[{meta.frame}]</span> : null}
                                 <Button
-                                  size="xs" variant="outline"
+                                  size="sm" variant="outline"
                                   onClick={() => { if (meta.raw_value != null) navigator.clipboard.writeText(String(meta.raw_value)) }}
                                   aria-label="Copy raw XBRL value"
                                 >Copy raw</Button>

@@ -751,7 +751,7 @@ export default function ScenarioAnalysisPage() {
               <div className="text-sm space-y-2">
                 <p>
                   <strong>Valuation Sensitivity:</strong> Shows how changes in economic conditions
-                  affect the company's valuation.
+                  affect the company&apos;s valuation.
                 </p>
                 <p>
                   <strong>Risk Management:</strong> Helps identify scenarios that could significantly

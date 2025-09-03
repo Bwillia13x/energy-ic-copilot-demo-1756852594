@@ -1,4 +1,13 @@
-export const DEMO_COMPANIES: Record<string, any> = {
+interface CompanyData {
+  name: string
+  ticker: string
+  currency: string
+  fiscal_year_end: string
+  sector: string
+  country: string
+}
+
+export const DEMO_COMPANIES: Record<string, CompanyData> = {
   PSX: {
     name: 'Phillips 66',
     ticker: 'PSX',

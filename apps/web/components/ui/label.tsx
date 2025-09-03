@@ -3,7 +3,10 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
+  // Interface for future extension of label props
+}
 
 const Label = React.forwardRef<HTMLLabelElement, LabelProps>(({ className, ...props }, ref) => (
   <label

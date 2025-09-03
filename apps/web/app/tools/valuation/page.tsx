@@ -563,7 +563,7 @@ export default function AdvancedValuationPage() {
                 <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-yellow-500" />
                 <h3 className="text-lg font-semibold mb-2">No Sensitivity Data</h3>
                 <p className="text-muted-foreground mb-4">
-                  Click "Run Sensitivity Analysis" to see how valuation changes with different assumptions.
+                  Click &ldquo;Run Sensitivity Analysis&rdquo; to see how valuation changes with different assumptions.
                 </p>
               </CardContent>
             </Card>

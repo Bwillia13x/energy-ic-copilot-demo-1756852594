@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-function calc(inputs: any) {
+function calc(inputs: Record<string, number>) {
   const rf = inputs.risk_free_rate ?? 0.04
   const mrp = inputs.market_risk_premium ?? 0.06
   const beta = inputs.beta ?? 0.8
@@ -24,8 +24,6 @@ function calc(inputs: any) {
 
   return { epv, dcf_value, wacc, cost_of_equity: coe, cost_of_debt_after_tax: codAfter, ev_ebitda_ratio, net_debt_ebitda_ratio }
 }
-
-interface Params { params: { ticker: string } }
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))

@@ -480,7 +480,7 @@ export default function MonteCarloPage() {
                 <div className="p-3 bg-red-50 dark:bg-red-950 rounded-lg">
                   <h4 className="font-medium text-red-800 dark:text-red-200 mb-2">Value at Risk (VaR)</h4>
                   <p className="text-sm text-red-700 dark:text-red-300">
-                    95% confidence that valuation won't fall below {formatCurrency(Math.min(stats.epv_var_95, stats.dcf_var_95), 'CAD')}
+                    95% confidence that valuation won&apos;t fall below {formatCurrency(Math.min(stats.epv_var_95, stats.dcf_var_95), 'CAD')}
                   </p>
                 </div>
 

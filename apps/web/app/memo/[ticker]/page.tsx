@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Download, FileText } from 'lucide-react'
-import { fetchJsonWithRetry, HttpError } from '@/lib/http'
+import { ArrowLeft, Download } from 'lucide-react'
+import { fetchJsonWithRetry } from '@/lib/http'
 import { formatCurrency, formatNumber, formatPercentage } from '@/lib/utils'
 import { useLoading } from '@/lib/loading-context'
 
@@ -79,7 +79,7 @@ export default function MemoPage() {
       setKpis(kpiData.kpis)
 
       // Calculate valuation (simplified - in real app would fetch from valuation endpoint)
-      await calculateValuation(kpiData.kpis, companyData.currency)
+      await calculateValuation(kpiData.kpis)
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
@@ -88,7 +88,7 @@ export default function MemoPage() {
     }
   }
 
-  const calculateValuation = async (kpiData: Record<string, KPI>, currency: string) => {
+  const calculateValuation = async (kpiData: Record<string, KPI>) => {
     const ebitda = kpiData.EBITDA?.value || 3450
     const netDebt = kpiData.NetDebt?.value || 18750
     const maintenanceCapex = kpiData.MaintenanceCapex?.value || 220
@@ -223,7 +223,7 @@ export default function MemoPage() {
             <p className="text-foreground/90 leading-relaxed">
               {company.name} represents an attractive investment opportunity in the energy infrastructure sector,
               offering stable cash flows, defensive characteristics, and attractive valuation metrics.
-              The company's diversified asset base and long-term contracted revenues provide visibility
+              The company&apos;s diversified asset base and long-term contracted revenues provide visibility
               into future earnings power.
             </p>
           </div>

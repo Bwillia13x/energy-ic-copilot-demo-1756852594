@@ -25,50 +25,38 @@ function ClientOnly({ children }: { children: React.ReactNode }) {
     return null
   }
 
-  return React.createElement(React.Fragment, null, children)
+  return <>{children}</>
 }
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
-  return React.createElement(
-    React.Fragment,
-    null,
-    React.createElement(TopProgress, null),
-    React.createElement(
-      ThemeProvider,
-      { defaultTheme: "system", storageKey: "energy-ic-theme" },
-      React.createElement(
-        LoadingProvider,
-        null,
-        React.createElement(
-          ErrorBoundary,
-          null,
-          React.createElement(
-            "a",
-            {
-              href: "#main",
-              className: "sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-background border rounded px-3 py-1"
-            },
-            "Skip to content"
-          ),
-          React.createElement(DemoBanner, null),
-          React.createElement(SiteHeader, null),
-          React.createElement(
-            ClientOnly,
-            null,
-            React.createElement(ApiHealthBanner, null),
-            React.createElement(Toaster, null),
-            React.createElement(Analytics, null),
-            React.createElement(PerformanceMonitor, null),
-            React.createElement(KeyboardShortcuts, null)
-          ),
-          React.createElement(
-            "div",
-            { id: "main", className: "min-h-screen bg-background" },
-            children
-          ),
-          React.createElement(SiteFooter, null)
-        )
-      )
-    )
+  return (
+    <>
+      <TopProgress />
+      <ThemeProvider defaultTheme="system" storageKey="energy-ic-theme">
+        <LoadingProvider>
+          <ErrorBoundary>
+            <a
+              href="#main"
+              className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-background border rounded px-3 py-1"
+            >
+              Skip to content
+            </a>
+            <DemoBanner />
+            <SiteHeader />
+            <ClientOnly>
+              <ApiHealthBanner />
+              <Toaster />
+              <Analytics />
+              <PerformanceMonitor />
+              <KeyboardShortcuts />
+            </ClientOnly>
+            <div id="main" className="min-h-screen bg-background">
+              {children}
+            </div>
+            <SiteFooter />
+          </ErrorBoundary>
+        </LoadingProvider>
+      </ThemeProvider>
+    </>
   )
 }

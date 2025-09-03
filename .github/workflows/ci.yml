@@ -21,7 +21,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
         cache-dependency-path: apps/web/package-lock.json
 
@@ -66,7 +66,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
         cache-dependency-path: apps/web/package-lock.json
 
@@ -76,8 +76,14 @@ jobs:
         npm ci
 
     - name: Build Next.js app
+      env:
+        NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+        VARS_NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
       run: |
         cd apps/web
+        # Prefer secret, then org/repo var, otherwise let Next.js default handle it
+        export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-${VARS_NEXT_PUBLIC_API_URL:-}}"
+        if [ -n "$NEXT_PUBLIC_API_URL" ]; then echo "NEXT_PUBLIC_API_URL is set for build"; else echo "NEXT_PUBLIC_API_URL not set; using defaults"; fi
         npm run build
 
     - name: Upload build artifacts
@@ -109,3 +115,20 @@ jobs:
         context: ./apps/web
         push: false
         tags: energy-ic-copilot-web:test
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker
+    if: ${{ secrets.VERCEL_DEPLOY_HOOK_URL != '' }}
+    steps:
+    - name: Trigger Vercel deploy hook (if configured)
+      env:
+        HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+      run: |
+        if [ -n "$HOOK" ]; then
+          echo "Triggering Vercel deploy hook..."
+          curl -fsS -X POST "$HOOK" -H 'Content-Type: application/json' -d '{"source":"github-actions"}'
+          echo "Deploy hook triggered"
+        else
+          echo "VERCEL_DEPLOY_HOOK_URL not set; skipping deploy"
+        fi

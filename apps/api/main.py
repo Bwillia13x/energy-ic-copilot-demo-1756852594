@@ -5,7 +5,7 @@ Provides endpoints for KPI extraction, valuation calculations, and data manageme
 
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi import Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,10 +18,10 @@ import os
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 # Import core modules
-from core.extract import KPIExtractor, extract_kpis_from_filings, ExtractedKPI
-from core.valuation import ValuationEngine, ValuationInputs, ValuationScenario, ValuationResults
-from core.cite import Citation
-from core.data_manager import create_data_manager
+from core.extract import KPIExtractor, extract_kpis_from_filings  # noqa: E402
+from core.valuation import ValuationEngine, ValuationInputs, ValuationScenario, ValuationResults  # noqa: E402
+from core.cite import Citation  # noqa: E402,F401
+from core.data_manager import create_data_manager  # noqa: E402
 
 # Configuration
 PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -36,13 +36,44 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS middleware
+# Environment-based CORS configuration
+
+def get_cors_origins():
+    """Get CORS allowed origins based on environment."""
+    env = os.getenv("ENVIRONMENT", "development").lower()
+
+    if env == "production":
+        # Strict allowlist for production
+        return [
+            "https://energy-ic-copilot-demo.vercel.app",
+            "https://energy-ic-copilot-demo-1756852594.vercel.app",
+            "https://energy-ic-copilot-demo-1756852594-*.vercel.app",
+        ]
+    elif env == "staging":
+        # More permissive for staging
+        return [
+            "https://energy-ic-copilot-staging.vercel.app",
+            "https://energy-ic-copilot-staging-*.vercel.app",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+        ]
+    else:
+        # Permissive for development
+        return [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3001",
+        ]
+
+# CORS middleware with environment-based configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    max_age=86400,  # Cache preflight requests for 24 hours
 )
 
 # Pydantic models for API
@@ -101,8 +132,13 @@ async def get_company(ticker: str):
         return CompanyInfo(**companies_data[ticker])
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Companies data not found")
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error loading company: {str(e)}")
+        # Log the error for debugging but return a generic message
+        print(f"Error loading company {ticker}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error while loading company data")
 
 @app.post("/ingest")
 async def ingest_document(file: UploadFile = File(...), ticker: str = None):
