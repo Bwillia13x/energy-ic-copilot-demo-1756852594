@@ -1,10 +1,18 @@
 export const DEMO_COMPANIES: Record<string, any> = {
-  ENB: {
-    name: 'Enbridge Inc.',
-    ticker: 'ENB',
+  PSX: {
+    name: 'Phillips 66',
+    ticker: 'PSX',
+    currency: 'USD',
+    fiscal_year_end: 'DEC',
+    sector: 'Oil & Gas Refining/Marketing',
+    country: 'United States',
+  },
+  SU: {
+    name: 'Suncor Energy Inc.',
+    ticker: 'SU',
     currency: 'CAD',
     fiscal_year_end: 'DEC',
-    sector: 'Energy Infrastructure',
+    sector: 'Integrated Oil & Gas',
     country: 'Canada',
   },
   TRP: {
@@ -15,13 +23,4 @@ export const DEMO_COMPANIES: Record<string, any> = {
     sector: 'Energy Infrastructure',
     country: 'Canada',
   },
-  PPL: {
-    name: 'Pembina Pipeline',
-    ticker: 'PPL',
-    currency: 'CAD',
-    fiscal_year_end: 'DEC',
-    sector: 'Energy Infrastructure',
-    country: 'Canada',
-  },
 }
-

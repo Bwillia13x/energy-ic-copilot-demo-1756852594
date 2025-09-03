@@ -42,6 +42,9 @@ interface ScenarioInputs {
   debt_weight: number
   equity_weight: number
   terminal_growth: number
+  // Transparency additions
+  cash_from_operations?: number
+  fcf_mode?: 'standard' | 'use_cfo'
 }
 
 interface Scenario {
@@ -145,13 +148,53 @@ export default function ScenarioAnalysisPage() {
   const [scenarioResults, setScenarioResults] = useState<ScenarioResult[]>([])
   const [loading, setLoading] = useState(false)
   const [baseValuation, setBaseValuation] = useState<{ epv: number; dcf: number } | null>(null)
+  const [lastValuationRaw, setLastValuationRaw] = useState<any | null>(null)
+  const [selectedTicker, setSelectedTicker] = useState<'PSX'|'SU'|'TRP'>('PSX')
+  const [currentCurrency, setCurrentCurrency] = useState<'USD'|'CAD'>('USD')
+  const [displayCurrency, setDisplayCurrency] = useState<'local'|'USD'>('local')
+  const [audited, setAudited] = useState<any | null>(null)
   const [xbrl, setXbrl] = useState<XbrlResponse | null>(null)
   const [xbrlPeriod, setXbrlPeriod] = useState<'any'|'ytd'|'qtd'>('any')
 
-  // Calculate base valuation on mount
+  // Load audited inputs for selected ticker and calculate
   useEffect(() => {
-    calculateBaseValuation()
-  }, [])
+    ;(async () => {
+      try {
+        const needsUsd = (selectedTicker === 'TRP' || selectedTicker === 'SU') && displayCurrency === 'USD'
+        const q = needsUsd ? '?to=USD&method=fyavg&date=2024-12-31' : ''
+        const res = await fetchJsonWithRetry<any>(`/api/demo/financials/${selectedTicker}${q}`)
+        setAudited(res)
+        const currency = (res.audited?.currency || 'USD') as 'USD'|'CAD'
+        setCurrentCurrency(currency)
+        const cfo = res.audited?.cash_from_operations ?? null
+        const netDebt = res.derived?.net_debt_excl_leases ?? null
+        if (cfo != null && netDebt != null) {
+          setBaseInputs(prev => ({
+            ...prev,
+            ebitda: cfo, // placeholder; EPV/DCF will use CFO via fcf_mode
+            net_debt: netDebt,
+            maintenance_capex: 0,
+            cash_from_operations: cfo,
+            fcf_mode: 'use_cfo'
+          }))
+        }
+        setTimeout(calculateBaseValuation, 0)
+      } catch (e) {
+        console.warn('Failed to load audited inputs', e)
+        calculateBaseValuation()
+      }
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTicker, displayCurrency])
+
+  // Default currency behavior when switching tickers
+  useEffect(() => {
+    // Make TRP default to USD on first switch from non-TRP (if still local)
+    if (selectedTicker === 'TRP' && displayCurrency === 'local') {
+      setDisplayCurrency('USD')
+    }
+    // Keep SU default as Local (CAD); leave user choice if already changed
+  }, [selectedTicker])
 
   useEffect(() => {
     ;(async () => {
@@ -184,6 +227,7 @@ export default function ScenarioAnalysisPage() {
         epv: response.epv,
         dcf: response.dcf_value
       })
+      setLastValuationRaw(response)
     } catch (error) {
       console.error('Error calculating base valuation:', error)
     }
@@ -340,6 +384,35 @@ export default function ScenarioAnalysisPage() {
             </p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-muted-foreground">Company</label>
+          <Select value={selectedTicker} onValueChange={(v) => setSelectedTicker(v as any)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PSX">PSX — Phillips 66</SelectItem>
+              <SelectItem value="SU">SU — Suncor</SelectItem>
+              <SelectItem value="TRP">TRP — TC Energy</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm text-muted-foreground">Currency</label>
+          {(selectedTicker === 'TRP' || selectedTicker === 'SU') ? (
+            <Select value={displayCurrency} onValueChange={(v) => setDisplayCurrency(v as any)}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="local">Local (CAD)</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="text-sm text-muted-foreground">{currentCurrency}</div>
+          )}
+        </div>
       </div>
 
       {/* Compact XBRL Sidebar */}
@@ -433,11 +506,11 @@ export default function ScenarioAnalysisPage() {
               <div className="pt-4 border-t space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Base EPV:</span>
-                  <span className="font-mono">{formatCurrency(baseValuation.epv, 'CAD')}</span>
+                  <span className="font-mono">{formatCurrency(baseValuation.epv, currentCurrency)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Base DCF:</span>
-                  <span className="font-mono">{formatCurrency(baseValuation.dcf, 'CAD')}</span>
+                  <span className="font-mono">{formatCurrency(baseValuation.dcf, currentCurrency)}</span>
                 </div>
               </div>
             )}
@@ -566,8 +639,8 @@ export default function ScenarioAnalysisPage() {
               <Chart>
                 <BarChart data={getScenarioChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <XAxis dataKey="scenario" angle={-45} textAnchor="end" height={80} />
-                  <YAxis tickFormatter={(value) => formatCurrency(value, 'CAD')} />
-                  <Tooltip formatter={(value: number) => formatCurrency(value, 'CAD')} />
+                  <YAxis tickFormatter={(value) => formatCurrency(value, currentCurrency)} />
+                  <Tooltip formatter={(value: number) => formatCurrency(value, currentCurrency)} />
                   <Legend />
                   <Bar dataKey="Base EPV" fill="#0A84FF" name="Base EPV" />
                   <Bar dataKey="Scenario EPV" fill="#34C759" name="Scenario EPV" />
@@ -603,14 +676,14 @@ export default function ScenarioAnalysisPage() {
                       <tr key={result.scenario} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
                         <td className="border border-border p-3 font-medium">{result.scenario}</td>
                         <td className="border border-border p-3 text-right font-mono">
-                          {formatCurrency(result.base_epv, 'CAD')}
+                          {formatCurrency(result.base_epv, currentCurrency)}
                         </td>
                         <td className="border border-border p-3 text-right font-mono">
-                          {formatCurrency(result.scenario_epv, 'CAD')}
+                          {formatCurrency(result.scenario_epv, currentCurrency)}
                         </td>
                         <td className="border border-border p-3 text-right font-mono">
                           <span className={result.change_epv >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {result.change_epv >= 0 ? '+' : ''}{formatCurrency(result.change_epv, 'CAD')}
+                            {result.change_epv >= 0 ? '+' : ''}{formatCurrency(result.change_epv, currentCurrency)}
                           </span>
                         </td>
                         <td className="border border-border p-3 text-right font-mono">
@@ -619,14 +692,14 @@ export default function ScenarioAnalysisPage() {
                           </span>
                         </td>
                         <td className="border border-border p-3 text-right font-mono">
-                          {formatCurrency(result.base_dcf, 'CAD')}
+                          {formatCurrency(result.base_dcf, currentCurrency)}
                         </td>
                         <td className="border border-border p-3 text-right font-mono">
-                          {formatCurrency(result.scenario_dcf, 'CAD')}
+                          {formatCurrency(result.scenario_dcf, currentCurrency)}
                         </td>
                         <td className="border border-border p-3 text-right font-mono">
                           <span className={result.change_dcf >= 0 ? 'text-green-600' : 'text-red-600'}>
-                            {result.change_dcf >= 0 ? '+' : ''}{formatCurrency(result.change_dcf, 'CAD')}
+                            {result.change_dcf >= 0 ? '+' : ''}{formatCurrency(result.change_dcf, currentCurrency)}
                           </span>
                         </td>
                         <td className="border border-border p-3 text-right font-mono">
@@ -694,6 +767,50 @@ export default function ScenarioAnalysisPage() {
         </CardContent>
       </Card>
 
+      {/* Calculation Trace (Transparency) */}
+      {lastValuationRaw && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calculator className="w-5 h-5 text-blue-500" />
+              Calculation Trace
+            </CardTitle>
+            <CardDescription>Discrete steps, formulas, and inputs used in valuation</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3 text-sm">
+              {(lastValuationRaw.calculation_trace || []).map((step: any, idx: number) => (
+                <div key={idx} className="p-3 rounded border">
+                  <div className="font-medium">{step.name}</div>
+                  {step.formula && (
+                    <div className="text-muted-foreground">{step.formula}</div>
+                  )}
+                  {step.inputs && (
+                    <div className="mt-1 text-xs grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {Object.entries(step.inputs).map(([k,v]) => (
+                        <div key={k} className="flex items-center justify-between">
+                          <span className="text-muted-foreground">{k}</span>
+                          <span className="font-mono">{typeof v === 'number' ? v.toLocaleString() : String(v)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {typeof step.value === 'number' && (
+                    <div className="mt-1">
+                      <span className="text-muted-foreground">Result:</span>{' '}
+                      <span className="font-mono">{step.value.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {step.rationale && (
+                    <div className="mt-1 text-xs text-muted-foreground">{step.rationale}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Footer */}
       <div className="text-center mt-12 pt-8 border-t">
         <p className="text-sm text-muted-foreground">
@@ -704,4 +821,3 @@ export default function ScenarioAnalysisPage() {
     </div>
   )
 }
-

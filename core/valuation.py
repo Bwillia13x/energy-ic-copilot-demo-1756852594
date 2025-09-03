@@ -55,6 +55,9 @@ class ValuationInputs(BaseModel):
     net_income: Optional[float] = None  # net income for ROE calculation
     shareholder_equity: Optional[float] = None  # shareholder equity for ROE calculation
     interest_expense: Optional[float] = None  # interest expense for coverage ratio
+    # Cash flow override (for transparency when using audited CFO)
+    cash_from_operations: Optional[float] = None  # audited CFO (millions)
+    fcf_mode: Optional[str] = 'standard'  # 'standard' | 'use_cfo'
 
     # WACC (Weighted Average Cost of Capital) components
     risk_free_rate: float = 0.04  # typically 10-year Treasury yield
@@ -147,6 +150,8 @@ class ValuationResults(BaseModel):
 
     # Detailed DCF calculation components
     dcf_components: Dict[str, Any] = {}
+    # Full calculation trace for transparency
+    calculation_trace: List[Dict[str, Any]] = []
 
 
 class ValuationEngine:
@@ -170,7 +175,7 @@ class ValuationEngine:
         """Initialize the valuation engine with default settings."""
         pass
 
-    def calculate_wacc(self, inputs: ValuationInputs) -> float:
+    def calculate_wacc(self, inputs: ValuationInputs, trace: Optional[List[Dict[str, Any]]] = None) -> float:
         """
         Calculate Weighted Average Cost of Capital (WACC).
 
@@ -204,9 +209,41 @@ class ValuationEngine:
         wacc = (inputs.equity_weight * cost_of_equity) + \
                (inputs.debt_weight * cost_of_debt_after_tax)
 
+        if trace is not None:
+            trace.append({
+                'name': 'Cost of equity (CAPM)',
+                'formula': 'Re = Rf + β × MRP',
+                'inputs': {
+                    'Rf': inputs.risk_free_rate,
+                    'β': inputs.beta,
+                    'MRP': inputs.market_risk_premium,
+                },
+                'value': cost_of_equity
+            })
+            trace.append({
+                'name': 'After-tax cost of debt',
+                'formula': 'Rd_after = Rd × (1 - Tc)',
+                'inputs': {
+                    'Rd': inputs.cost_of_debt,
+                    'Tc': inputs.tax_rate,
+                },
+                'value': cost_of_debt_after_tax
+            })
+            trace.append({
+                'name': 'WACC',
+                'formula': 'WACC = E/V × Re + D/V × Rd_after',
+                'inputs': {
+                    'E/V': inputs.equity_weight,
+                    'D/V': inputs.debt_weight,
+                    'Re': cost_of_equity,
+                    'Rd_after': cost_of_debt_after_tax,
+                },
+                'value': wacc
+            })
+
         return wacc
 
-    def calculate_epv(self, inputs: ValuationInputs) -> float:
+    def calculate_epv(self, inputs: ValuationInputs, trace: Optional[List[Dict[str, Any]]] = None) -> float:
         """
         Calculate Enterprise Present Value (EPV) using the single-stage DCF model.
 
@@ -233,33 +270,105 @@ class ValuationEngine:
         Raises:
             ZeroDivisionError: If WACC is zero (handled by returning infinity)
         """
+        # Option A: CFO-based EPV (transparent when audited CFO is used as FCFF proxy)
+        if inputs.fcf_mode == 'use_cfo' and inputs.cash_from_operations is not None:
+            fcff = inputs.cash_from_operations
+            if trace is not None:
+                trace.append({
+                    'name': 'FCFF (proxy)',
+                    'formula': 'FCFF ≈ CFO',
+                    'inputs': { 'CFO': inputs.cash_from_operations },
+                    'value': fcff,
+                    'rationale': 'Using audited cash from operations as proxy for FCFF (assumes ΔNWC ≈ 0 and maintenance D&A ≈ capex).'
+                })
+            wacc = self.calculate_wacc(inputs, trace)
+            if wacc <= 0:
+                return float('inf')
+            epv = fcff / wacc
+            if trace is not None:
+                trace.append({
+                    'name': 'EPV (CFO-based)',
+                    'formula': 'EPV = FCFF / WACC',
+                    'inputs': { 'FCFF': fcff, 'WACC': wacc },
+                    'value': epv,
+                    'rationale': 'Single-stage perpetuity using CFO as FCFF proxy.'
+                })
+            return epv
+
+        # Option B: Standard EPV via normalized EBIT → NOPAT → FCFF
         normalized_ebit = inputs.ebitda - inputs.maintenance_capex
+        if trace is not None:
+            trace.append({
+                'name': 'Normalized EBIT',
+                'formula': 'EBITDA - Maintenance Capex',
+                'inputs': { 'EBITDA': inputs.ebitda, 'Maintenance Capex': inputs.maintenance_capex },
+                'value': normalized_ebit
+            })
         nopat = normalized_ebit * (1 - inputs.tax_rate)
+        if trace is not None:
+            trace.append({
+                'name': 'NOPAT',
+                'formula': 'Normalized EBIT × (1 - Tax Rate)',
+                'inputs': { 'Normalized EBIT': normalized_ebit, 'Tax Rate': inputs.tax_rate },
+                'value': nopat
+            })
         free_cash_flow = nopat * (1 - inputs.reinvestment_rate)
+        if trace is not None:
+            trace.append({
+                'name': 'FCFF',
+                'formula': 'NOPAT × (1 - Reinvestment Rate)',
+                'inputs': { 'NOPAT': nopat, 'Reinvestment Rate': inputs.reinvestment_rate },
+                'value': free_cash_flow
+            })
 
-        wacc = self.calculate_wacc(inputs)
-
+        wacc = self.calculate_wacc(inputs, trace)
         if wacc <= 0:
             return float('inf')  # Avoid division by zero
 
         epv = free_cash_flow / wacc
+        if trace is not None:
+            trace.append({
+                'name': 'EPV',
+                'formula': 'EPV = FCFF / WACC',
+                'inputs': { 'FCFF': free_cash_flow, 'WACC': wacc },
+                'value': epv
+            })
         return epv
 
-    def calculate_dcf(self, inputs: ValuationInputs) -> Dict[str, Any]:
+    def calculate_dcf(self, inputs: ValuationInputs, trace: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """
         Calculate Discounted Cash Flow value.
 
         Projects free cash flows for 5 years + terminal value.
         """
-        wacc = self.calculate_wacc(inputs)
+        wacc = self.calculate_wacc(inputs, trace)
         if wacc <= 0:
             return {"dcf_value": float('inf'), "components": {}}
 
-        # FCFF using steady-state assumption where maintenance capex ≈ D&A
-        # FCFF ≈ NOPAT when ΔNWC ~ 0 and D&A ≈ maintenance capex
-        # NOPAT = (EBITDA - maintenance_capex) × (1 - tax_rate)
-        normalized_ebit = inputs.ebitda - inputs.maintenance_capex
-        fcff = normalized_ebit * (1 - inputs.tax_rate)
+        # Base FCFF
+        if inputs.fcf_mode == 'use_cfo' and inputs.cash_from_operations is not None:
+            fcff = inputs.cash_from_operations
+            if trace is not None:
+                trace.append({
+                    'name': 'Base FCFF (proxy)',
+                    'formula': 'FCFF ≈ CFO',
+                    'inputs': { 'CFO': inputs.cash_from_operations },
+                    'value': fcff,
+                    'rationale': 'Using audited cash from operations as FCFF proxy.'
+                })
+        else:
+            # FCFF using steady-state assumption where maintenance capex ≈ D&A
+            # FCFF ≈ NOPAT when ΔNWC ~ 0 and D&A ≈ maintenance capex
+            # NOPAT = (EBITDA - maintenance_capex) × (1 - tax_rate)
+            normalized_ebit = inputs.ebitda - inputs.maintenance_capex
+            fcff = normalized_ebit * (1 - inputs.tax_rate)
+            if trace is not None:
+                trace.append({
+                    'name': 'Base FCFF',
+                    'formula': '(EBITDA - Maintenance Capex) × (1 - Tax Rate)',
+                    'inputs': { 'EBITDA': inputs.ebitda, 'Maintenance Capex': inputs.maintenance_capex, 'Tax Rate': inputs.tax_rate },
+                    'value': fcff
+                })
 
         # Project cash flows (simplified - constant growth)
         projected_fcffs = []
@@ -267,6 +376,13 @@ class ValuationEngine:
             projected_fcff = fcff * (1 + inputs.terminal_growth) ** year
             pv_fcff = projected_fcff / (1 + wacc) ** year
             projected_fcffs.append(pv_fcff)
+            if trace is not None:
+                trace.append({
+                    'name': f'Year {year} FCFF PV',
+                    'formula': f'FCFF_{year} = FCFF_0 × (1+g)^{year}; PV = FCFF_{year} / (1+WACC)^{year}',
+                    'inputs': { 'FCFF_0': fcff, 'g': inputs.terminal_growth, 'WACC': wacc },
+                    'value': pv_fcff
+                })
 
         # Terminal value using Gordon Growth Model
         # TV = FCFF_terminal / (WACC - g)
@@ -275,11 +391,32 @@ class ValuationEngine:
             terminal_value = float('inf')
         else:
             terminal_value = (fcff * (1 + inputs.terminal_growth)) / (wacc - inputs.terminal_growth)
+            if trace is not None:
+                trace.append({
+                    'name': 'Terminal value (un-discounted)',
+                    'formula': 'TV = FCFF_terminal / (WACC - g)',
+                    'inputs': { 'FCFF_terminal': fcff * (1 + inputs.terminal_growth), 'WACC': wacc, 'g': inputs.terminal_growth },
+                    'value': terminal_value
+                })
 
         # Present value of terminal value
         pv_terminal = terminal_value / (1 + wacc) ** inputs.projection_years
+        if trace is not None:
+            trace.append({
+                'name': 'PV of terminal value',
+                'formula': 'PV_TV = TV / (1 + WACC)^N',
+                'inputs': { 'TV': terminal_value, 'WACC': wacc, 'N': inputs.projection_years },
+                'value': pv_terminal
+            })
 
         dcf_value = sum(projected_fcffs) + pv_terminal
+        if trace is not None:
+            trace.append({
+                'name': 'DCF enterprise value',
+                'formula': 'Σ PV(FCFF) + PV(TV)',
+                'inputs': { 'sum_pv_fcff': sum(projected_fcffs), 'pv_terminal': pv_terminal },
+                'value': dcf_value
+            })
 
         return {
             "dcf_value": dcf_value,
@@ -321,9 +458,10 @@ class ValuationEngine:
             valuation_inputs = self.apply_scenario(inputs, scenario)
 
         # Calculate valuations using scenario-adjusted inputs
-        wacc = self.calculate_wacc(valuation_inputs)
-        epv = self.calculate_epv(valuation_inputs)
-        dcf_result = self.calculate_dcf(valuation_inputs)
+        trace: List[Dict[str, Any]] = []
+        wacc = self.calculate_wacc(valuation_inputs, trace)
+        epv = self.calculate_epv(valuation_inputs, trace)
+        dcf_result = self.calculate_dcf(valuation_inputs, trace)
 
         cost_of_equity = valuation_inputs.risk_free_rate + (valuation_inputs.beta * valuation_inputs.market_risk_premium)
         cost_of_debt_after_tax = valuation_inputs.cost_of_debt * (1 - valuation_inputs.tax_rate)
@@ -403,7 +541,8 @@ class ValuationEngine:
             dividend_yield=dividend_yield,
             debt_to_equity=debt_to_equity,
             interest_coverage=interest_coverage,
-            dcf_components=dcf_result["components"]
+            dcf_components=dcf_result["components"],
+            calculation_trace=trace
         )
 
         # Apply scenario if provided

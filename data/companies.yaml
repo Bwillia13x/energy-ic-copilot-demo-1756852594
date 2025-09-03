@@ -77,3 +77,19 @@ TRGP:
   fiscal_year_end: "December 31"
   sector: "Midstream Energy"
   country: "United States"
+
+PSX:
+  name: "Phillips 66"
+  ticker: "PSX"
+  currency: "USD"
+  fiscal_year_end: "December 31"
+  sector: "Oil & Gas Refining/Marketing"
+  country: "United States"
+
+SU:
+  name: "Suncor Energy Inc."
+  ticker: "SU"
+  currency: "CAD"
+  fiscal_year_end: "December 31"
+  sector: "Integrated Oil & Gas"
+  country: "Canada"
