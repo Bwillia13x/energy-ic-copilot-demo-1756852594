@@ -1,6 +1,10 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+
+// Force dynamic rendering to avoid SSR context issues
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -50,7 +54,7 @@ export default function AdvancedValuationPage() {
   const [inputs, setInputs] = useState<ValuationInputs>({
     ebitda: 3450,
     net_debt: 18750,
-    maintenance_capex: 345,
+    maintenance_capex: 220, // Fixed: Use $220M from PPL filing data
     tax_rate: 0.25,
     reinvestment_rate: 0.15,
     risk_free_rate: 0.04,
@@ -508,3 +512,5 @@ export default function AdvancedValuationPage() {
     </div>
   )
 }
+
+

@@ -37,7 +37,7 @@ export function ThemeProvider({
     if (typeof window !== 'undefined') {
       try {
         const storedTheme = localStorage.getItem(storageKey) as Theme
-        if (storedTheme) {
+        if (storedTheme && ['dark', 'light', 'system'].includes(storedTheme)) {
           setTheme(storedTheme)
         }
       } catch (error) {
@@ -48,18 +48,13 @@ export function ThemeProvider({
   }, [storageKey])
 
   React.useEffect(() => {
-    if (!mounted) return
+    if (!mounted || typeof window === 'undefined') return
 
     const root = window.document.documentElement
-
     root.classList.remove('light', 'dark')
 
     if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
-        .matches
-        ? 'dark'
-        : 'light'
-
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
       root.classList.add(systemTheme)
       return
     }
@@ -69,27 +64,19 @@ export function ThemeProvider({
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
+    setTheme: (newTheme: Theme) => {
+      setTheme(newTheme)
       if (mounted && typeof window !== 'undefined') {
         try {
-          localStorage.setItem(storageKey, theme)
+          localStorage.setItem(storageKey, newTheme)
         } catch (error) {
           console.warn('Unable to save theme to localStorage:', error)
         }
       }
-      setTheme(theme)
     },
   }
 
-  // Return a simplified provider during SSR
-  if (!mounted) {
-    return (
-      <ThemeProviderContext.Provider {...props} value={value}>
-        {children}
-      </ThemeProviderContext.Provider>
-    )
-  }
-
+  // Always return the same structure to avoid hydration mismatches
   return (
     <ThemeProviderContext.Provider {...props} value={value}>
       {children}

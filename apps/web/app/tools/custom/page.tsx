@@ -1,6 +1,10 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+
+// Force dynamic rendering to avoid SSR context issues
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -500,3 +504,5 @@ export default function CustomMetricsPage() {
     </div>
   )
 }
+
+

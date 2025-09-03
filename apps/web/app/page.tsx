@@ -2,6 +2,9 @@
 
 import { Suspense, useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
+
+// Force dynamic rendering to avoid SSR context issues
+export const dynamic = 'force-dynamic'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -614,3 +617,4 @@ export default function HomePage() {
     </Suspense>
   )
 }
+

@@ -104,7 +104,7 @@ def main():
     # PPL Corporation actual data (as of Q2 2024)
     ebitda = 3450
     net_debt = 18750
-    maintenance_capex = 345
+    maintenance_capex = 220  # Fixed: Use $220M from PPL filing data
     net_income = 1250
     shareholder_equity = 16750
     interest_expense = 380

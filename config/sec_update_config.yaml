@@ -1,0 +1,94 @@
+# SEC Data Update Configuration
+# Configuration for automated SEC filing updates
+
+# Update Schedule
+schedule:
+  enabled: true
+  frequency: "weekly"  # daily, weekly, monthly
+  day_of_week: "monday"  # For weekly updates
+  time: "09:00"  # 9:00 AM local time
+
+# Update Parameters
+update:
+  force_threshold_days: 30  # Force update if data is older than this
+  rate_limit_delay: 0.15    # Seconds between API requests
+  timeout: 30               # Request timeout in seconds
+  max_retries: 3            # Maximum retry attempts
+
+# Companies to track
+companies:
+  - ticker: "PPL"
+    name: "Pembina Pipeline Corporation"
+    priority: "high"
+
+  - ticker: "ENB"
+    name: "Enbridge Inc."
+    priority: "high"
+
+  - ticker: "TRP"
+    name: "TC Energy Corporation"
+    priority: "high"
+
+  - ticker: "MMP"
+    name: "Magellan Midstream Partners, L.P."
+    priority: "medium"
+
+  - ticker: "KMI"
+    name: "Kinder Morgan, Inc."
+    priority: "medium"
+
+  - ticker: "OKE"
+    name: "ONEOK, Inc."
+    priority: "medium"
+
+  - ticker: "WMB"
+    name: "The Williams Companies, Inc."
+    priority: "medium"
+
+  - ticker: "ET"
+    name: "Energy Transfer LP"
+    priority: "low"
+
+  - ticker: "TRGP"
+    name: "Targa Resources Corp."
+    priority: "low"
+
+# Filing Types to monitor
+filing_types:
+  - "10-K"  # Annual report
+  - "10-Q"  # Quarterly report
+  # - "8-K"   # Current reports (uncomment if needed)
+
+# Quality thresholds
+quality:
+  min_kpis_required: 3      # Minimum KPIs to extract for "good" quality
+  max_age_days: 90          # Maximum age for "fresh" data
+  warning_age_days: 45      # Age threshold for update warnings
+
+# Notification settings (for future implementation)
+notifications:
+  enabled: false
+  email: "admin@energyiccopilot.com"
+  on_failure: true
+  on_completion: false
+  webhook_url: ""  # For integration with monitoring systems
+
+# Logging configuration
+logging:
+  level: "INFO"
+  file: "logs/sec_updates.log"
+  max_size_mb: 10
+  retention_days: 30
+
+# API Configuration
+api:
+  user_agent: "EnergyICCopilot/1.0 (admin@energyiccopilot.com)"
+  base_url: "https://www.sec.gov"
+  edgar_api_base: "https://data.sec.gov"
+
+# Backup configuration
+backup:
+  enabled: true
+  before_update: true
+  max_backups: 10
+  retention_days: 90

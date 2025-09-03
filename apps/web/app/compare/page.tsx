@@ -1,19 +1,25 @@
 "use client"
 
 import { Suspense, useState, useEffect, useRef } from 'react'
+
+// Force dynamic rendering to avoid SSR context issues
+export const dynamic = 'force-dynamic'
+
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft } from 'lucide-react'
-import dynamic from 'next/dynamic'
+import { default as DynamicComponent } from 'next/dynamic'
+
+
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { Search, X, Copy, Download, Upload, CheckSquare, Square, Calculator, TrendingUp, Target, BarChart3, Settings, Zap, Save, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { fetchJsonWithRetry } from '@/lib/http'
 
 // Dynamically import CompanyComparison to avoid SSR issues
-const CompanyComparison = dynamic(() => import('@/components/company-comparison').then(mod => ({ default: mod.CompanyComparison })), {
+const CompanyComparison = DynamicComponent(() => import('@/components/company-comparison').then(mod => ({ default: mod.CompanyComparison })), {
   ssr: false,
   loading: () => <div className="p-8 text-center">Loading comparison tool...</div>
 })
@@ -41,6 +47,25 @@ interface CompanyData {
   }
 }
 
+interface XbrlMeta {
+  form?: string
+  end?: string
+  frame?: string
+  filed?: string
+  unit?: string
+  raw_value?: number | null
+}
+
+interface XbrlResponse {
+  ticker: string
+  cik: string
+  metrics_millions: Record<string, number | null>
+  facts_meta: Record<string, XbrlMeta | null>
+  source: string
+  retrieved_at: string
+  period_preference?: string
+}
+
 function ComparePageContent() {
   const [companies, setCompanies] = useState<CompanyData[]>([])
   const [selectedTickers, setSelectedTickers] = useState<string[]>([])
@@ -56,6 +81,10 @@ function ComparePageContent() {
   const [comparisonMetric, setComparisonMetric] = useState<string>('EBITDA')
   const [savedSets, setSavedSets] = useState<{ name: string; tickers: string[]; metric?: string; type?: 'bar' | 'valuation' }[]>([])
   const [newSetName, setNewSetName] = useState('')
+  const [xbrlTicker, setXbrlTicker] = useState<string | null>(null)
+  const [xbrlPeriod, setXbrlPeriod] = useState<'any'|'ytd'|'qtd'>('any')
+  const [xbrl, setXbrl] = useState<XbrlResponse | null>(null)
+  const [xbrlError, setXbrlError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const importRef = useRef<HTMLInputElement | null>(null)
   const { toast } = useToast()
@@ -109,6 +138,31 @@ function ComparePageContent() {
     const qs = params.toString()
     router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false })
   }, [query, sortBy, selectedTickers, comparisonMetric, chartType])
+
+  // XBRL: focus on first selected ticker
+  useEffect(() => {
+    const focus = selectedTickers[0] || null
+    setXbrlTicker(focus)
+  }, [selectedTickers])
+
+  useEffect(() => {
+    const t = xbrlTicker
+    if (!t) { setXbrl(null); return }
+    ;(async () => {
+      try {
+        setXbrlError(null)
+        const res = await fetchJsonWithRetry<XbrlResponse>(
+          `${process.env.NEXT_PUBLIC_API_URL}/xbrl/${t}?period=${xbrlPeriod}`,
+          undefined,
+          { timeoutMs: 8000, retries: 2, backoffMs: 500 }
+        )
+        setXbrl(res)
+      } catch (e) {
+        setXbrl(null)
+        setXbrlError('XBRL metrics unavailable')
+      }
+    })()
+  }, [xbrlTicker, xbrlPeriod])
 
   // Persist saved sets
   useEffect(() => {
@@ -706,6 +760,102 @@ function ComparePageContent() {
         onComparisonMetricChange={setComparisonMetric}
       />
 
+      {/* XBRL Structured Metrics for Focus Ticker */}
+      {xbrlTicker && (
+        <div className="max-w-6xl mx-auto mt-8">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>SEC XBRL Metrics: {xbrlTicker}</CardTitle>
+                  <CardDescription>Standardized GAAP facts in USD millions for the first selected ticker</CardDescription>
+                </div>
+                <div className="flex items-center gap-2" role="group" aria-label="XBRL period selector">
+                  {(['any','ytd','qtd'] as const).map(p => (
+                    <Button
+                      key={p}
+                      size="sm"
+                      variant={xbrlPeriod === p ? 'default' : 'outline'}
+                      onClick={() => setXbrlPeriod(p)}
+                      aria-pressed={xbrlPeriod === p}
+                    >
+                      {p.toUpperCase()}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {xbrl ? (
+                <div className="overflow-x-auto">
+                  <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <span>Preference: {xbrl.period_preference || 'ANY'}</span>
+                      <span>•</span>
+                      <span>Retrieved: {new Date(xbrl.retrieved_at).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {(() => {
+                        const cik10 = (xbrl.cik || '').padStart(10, '0')
+                        const factsUrl = `https://data.sec.gov/api/xbrl/companyfacts/CIK${cik10}.json`
+                        const filingsUrl = `https://www.sec.gov/edgar/browse/?CIK=${xbrl.cik}&owner=exclude`
+                        return (
+                          <>
+                            <a href={factsUrl} target="_blank" rel="noreferrer noopener" className="underline hover:no-underline">Companyfacts JSON</a>
+                            <span>•</span>
+                            <a href={filingsUrl} target="_blank" rel="noreferrer noopener" className="underline hover:no-underline">Filings</a>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  </div>
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-muted-foreground">
+                      <tr>
+                        <th className="py-2 pr-4">Metric</th>
+                        <th className="py-2 pr-4">Value (USD mm)</th>
+                        <th className="py-2">Source / Verify</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['ebitda','EBITDA (proxy)'],
+                        ['net_income','Net Income'],
+                        ['interest_expense','Interest Expense'],
+                        ['net_debt','Net Debt'],
+                        ['shareholder_equity','Shareholder Equity'],
+                        ['total_assets','Total Assets'],
+                        ['cash','Cash & Equivalents'],
+                        ['total_debt','Total Debt'],
+                        ['shares_outstanding','Shares Outstanding (mm)'],
+                      ].map(([key,label]) => {
+                        const val = xbrl.metrics_millions[key as keyof XbrlResponse['metrics_millions']] as number | null
+                        const meta = xbrl.facts_meta[key as keyof XbrlResponse['facts_meta']] as XbrlMeta | null
+                        return (
+                          <tr key={key} className="border-t">
+                            <td className="py-2 pr-4 font-medium">{label}</td>
+                            <td className="py-2 pr-4">{val != null ? val.toLocaleString() : '-'}</td>
+                            <td className="py-2 text-muted-foreground">
+                              {meta ? (
+                                <span title={`filed ${meta.filed}; raw ${meta.raw_value} ${meta.unit || ''}`}>
+                                  {meta.form || '—'} / {meta.end || '—'} / {meta.frame || '—'}
+                                </span>
+                              ) : '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">{xbrlError || 'No structured metrics available'}</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Saved Sets */}
       {savedSets.length > 0 && (
         <div className="max-w-5xl mx-auto mt-8">
@@ -759,3 +909,6 @@ export default function ComparePage() {
     </Suspense>
   )
 }
+
+
+

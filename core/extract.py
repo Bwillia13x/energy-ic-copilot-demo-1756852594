@@ -265,8 +265,18 @@ class KPIExtractor:
                 return None, None
 
             # Extract numeric value from match
+            # Prefer explicit capturing group if present; fallback to scanning match text
             match_text = match.group(0)
-            value = self._extract_numeric_value(match_text)
+            if match.groups():
+                raw_val = match.group(1)
+                # Clean currency/commas and convert
+                cleaned = re.sub(r'[\$,]', '', raw_val)
+                try:
+                    value = float(cleaned.replace(',', ''))
+                except ValueError:
+                    value = self._extract_numeric_value(match_text)
+            else:
+                value = self._extract_numeric_value(match_text)
 
             if value is None:
                 return None, None
@@ -275,6 +285,10 @@ class KPIExtractor:
             if normalize == 'strip_commas':
                 # Value is already numeric, no need to strip commas from display
                 pass
+
+            # Normalize scale to "millions" based on context in match text
+            scale_multiplier = self._infer_scale_multiplier(match_text)
+            value *= scale_multiplier
 
             # Create citation
             citation = create_citation_from_match(
@@ -333,6 +347,28 @@ class KPIExtractor:
                 return max(valid_values)
 
         return None
+
+    def _infer_scale_multiplier(self, text: str) -> float:
+        """
+        Infer a numeric scale multiplier to convert to 'millions' units based on nearby words.
+
+        Rules:
+        - contains 'billion' or 'bn' => ×1000 (billions -> millions)
+        - contains 'thousand' or 'k' => ×0.001 (thousands -> millions) [conservative: only 'thousand']
+        - contains 'million', 'mm', '(mm)' => ×1
+        - default => ×1 (assume already in millions per mappings convention)
+        """
+        t = text.lower()
+        # explicit billion
+        if re.search(r"\bbillion(s)?\b|\bbn\b", t):
+            return 1000.0
+        # explicit thousand
+        if re.search(r"\bthousand(s)?\b", t):
+            return 0.001
+        # indications of millions
+        if re.search(r"\bmillion(s)?\b|\bmm\b|\(\$?mm\)|\$mm\b", t):
+            return 1.0
+        return 1.0
 
 
 def extract_kpis_from_filings(

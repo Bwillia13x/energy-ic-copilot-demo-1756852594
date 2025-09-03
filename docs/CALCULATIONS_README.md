@@ -44,11 +44,11 @@ EPV = Free Cash Flow / WACC
 **Step-by-step for PPL Corporation:**
 ```
 1. EBITDA = $3,450 million
-2. Maintenance Capex = $345 million
-3. Normalized EBIT = $3,450M - $345M = $3,205M
-4. NOPAT = $3,205M × (1 - 25%) = $2,404M
-5. Free Cash Flow = $2,404M × (1 - 15%) = $2,043M
-6. EPV = $2,043M / 6.78% = $30,119M
+2. Maintenance Capex = $220 million  ← Corrected from filing data
+3. Normalized EBIT = $3,450M - $220M = $3,230M
+4. NOPAT = $3,230M × (1 - 25%) = $2,423M
+5. Free Cash Flow = $2,423M × (1 - 15%) = $2,060M
+6. EPV = $2,060M / 6.78% = $30,385M
 ```
 
 **Real-world interpretation:** PPL is worth approximately $30.1 billion to all its investors.

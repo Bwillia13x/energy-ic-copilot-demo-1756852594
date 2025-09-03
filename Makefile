@@ -5,7 +5,13 @@
 # Development
 dev:
 	@echo "Starting development servers..."
+	@echo "🛑 Killing any existing processes on ports 3000 and 8000..."
+	@lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+	@lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+	@sleep 2
+	@echo "🚀 Starting API server (port 8000)..."
 	@(cd apps/api && python3 -m uvicorn main:app --reload --host 0.0.0.0 --port 8000) & \
+	 echo "🚀 Starting web server (port 3000)..." && \
 	 (cd apps/web && npm run dev) & \
 	 wait
 
@@ -44,10 +50,18 @@ clean:
 	@find . -type d -name "__pycache__" -exec rm -rf {} +
 	@find . -type d -name ".next" -exec rm -rf {} +
 	@find . -type d -name "node_modules" -exec rm -rf {} +
+	@find . -type d -name ".turbo" -exec rm -rf {} +
 	@find . -name "*.pyc" -delete
 	@find . -name "*.pyo" -delete
 	@find . -name "*.pyd" -delete
 	@echo "✅ Cleanup completed"
+
+# Clean and restart dev servers
+dev-clean:
+	@echo "🧹 Performing clean restart..."
+	@make clean
+	@sleep 2
+	@make dev
 
 # Health check
 health:
@@ -73,6 +87,7 @@ help:
 	@echo ""
 	@echo "Development:"
 	@echo "  make dev          - Start both API and web servers"
+	@echo "  make dev-clean    - Clean restart (removes cache, kills processes)"
 	@echo "  make install      - Install all dependencies"
 	@echo "  make setup        - Full setup (install + environment)"
 	@echo ""

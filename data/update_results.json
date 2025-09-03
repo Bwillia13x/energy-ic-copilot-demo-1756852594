@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-09-02T18:52:57.567836",
+  "force_update": true,
+  "total_companies": 1,
+  "successful_updates": 1,
+  "failed_updates": 0,
+  "total_metrics": 4,
+  "results": [
+    {
+      "ticker": "KMI",
+      "success": true,
+      "filing_date": "2025-07-18",
+      "metrics_extracted": 4,
+      "error_message": null,
+      "last_updated": "2025-09-02T18:52:57.567761"
+    }
+  ]
+}

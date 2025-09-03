@@ -114,6 +114,47 @@ class TestKPIExtractor:
             value = extractor._extract_numeric_value(text)
             assert value == expected, f"Failed to extract {expected} from '{text}'"
 
+    def test_scale_normalization_billion(self):
+        """Values expressed in billions are normalized to millions."""
+        extractor = KPIExtractor(self.mappings_path)
+
+        content = "Adjusted EBITDA was $4.2 billion for the quarter."
+        pattern = r"Adjusted EBITDA was \$?([0-9,]+(?:\.[0-9]+)?)\s*(?:billion|million)"
+
+        value, citation = extractor._extract_single_kpi(
+            content=content,
+            pattern=pattern,
+            doc_id="test.txt",
+            unit="USD millions",
+            normalize="strip_commas",
+        )
+
+        assert value == 4200.0
+        assert citation is not None
+
+    def test_us_interest_expense_net_billion(self):
+        """US issuer interest expense, net in billions normalizes to millions."""
+        extractor = KPIExtractor(self.mappings_path)
+
+        sample = (
+            "KINDER MORGAN, INC.\n"
+            "Interest expense, net was $1.8 billion for the period."
+        )
+
+        import tempfile
+        from pathlib import Path
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write(sample)
+            p = Path(f.name)
+
+        try:
+            kpis = extractor.extract_from_file(p, "KMI")
+            assert "InterestExpense" in kpis
+            assert kpis["InterestExpense"].value == 1800.0
+            assert kpis["InterestExpense"].unit == "USD millions"
+        finally:
+            p.unlink()
+
     def test_citation_creation(self):
         """Test citation creation."""
         extractor = KPIExtractor(self.mappings_path)

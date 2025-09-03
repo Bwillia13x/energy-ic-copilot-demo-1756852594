@@ -83,6 +83,25 @@ interface ValuationResults {
   dcf_components: any
 }
 
+interface XbrlMeta {
+  form?: string
+  end?: string
+  frame?: string
+  filed?: string
+  unit?: string
+  raw_value?: number | null
+}
+
+interface XbrlResponse {
+  ticker: string
+  cik: string
+  metrics_millions: Record<string, number | null>
+  facts_meta: Record<string, XbrlMeta | null>
+  source: string
+  retrieved_at: string
+  period_preference?: string
+}
+
 export default function CompanyPage() {
   const params = useParams()
   const ticker = params.ticker as string
@@ -95,12 +114,33 @@ export default function CompanyPage() {
   const [valuationResults, setValuationResults] = useState<ValuationResults | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [xbrl, setXbrl] = useState<XbrlResponse | null>(null)
+  const [xbrlPeriod, setXbrlPeriod] = useState<'any'|'ytd'|'qtd'|'quarter'>('any')
+  const [xbrlError, setXbrlError] = useState<string | null>(null)
 
   useEffect(() => {
     if (ticker) {
       fetchCompanyData()
     }
   }, [ticker])
+
+  useEffect(() => {
+    if (!ticker) return
+    ;(async () => {
+      try {
+        setXbrlError(null)
+        const res = await fetchJsonWithRetry<XbrlResponse>(
+          `${process.env.NEXT_PUBLIC_API_URL}/xbrl/${ticker}?period=${xbrlPeriod}`,
+          undefined,
+          { timeoutMs: 8000, retries: 2, backoffMs: 500 }
+        )
+        setXbrl(res)
+      } catch (e: any) {
+        setXbrl(null)
+        setXbrlError('XBRL metrics unavailable')
+      }
+    })()
+  }, [ticker, xbrlPeriod])
 
   const fetchCompanyData = useCallback(async () => {
     try {
@@ -571,6 +611,124 @@ export default function CompanyPage() {
 
         {/* Charts Section */}
         <div className="mt-8 space-y-6">
+        {/* XBRL Structured Metrics */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <CardTitle>SEC XBRL Metrics (structured)</CardTitle>
+                <CardDescription>
+                  Standardized GAAP facts from SEC companyfacts (USD millions). Use the controls to change flow period and verify on SEC.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2" role="group" aria-label="XBRL period selector">
+                {(['any','ytd','qtd'] as const).map(p => (
+                  <Button
+                    key={p}
+                    size="sm"
+                    variant={xbrlPeriod === p ? 'default' : 'outline'}
+                    onClick={() => setXbrlPeriod(p)}
+                    aria-pressed={xbrlPeriod === p}
+                  >
+                    {p.toUpperCase()}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {xbrl ? (
+              <div className="overflow-x-auto">
+                <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span>Preference: {xbrl.period_preference || 'ANY'}</span>
+                    <span>•</span>
+                    <span>Retrieved: {new Date(xbrl.retrieved_at).toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const cik10 = (xbrl.cik || '').padStart(10, '0')
+                      const factsUrl = `https://data.sec.gov/api/xbrl/companyfacts/CIK${cik10}.json`
+                      const filingsUrl = `https://www.sec.gov/edgar/browse/?CIK=${xbrl.cik}&owner=exclude`
+                      return (
+                        <>
+                          <a
+                            href={factsUrl}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="underline hover:no-underline"
+                            aria-label="Open SEC companyfacts JSON in a new tab"
+                          >
+                            Companyfacts JSON
+                          </a>
+                          <span>•</span>
+                          <a
+                            href={filingsUrl}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="underline hover:no-underline"
+                            aria-label="Open SEC company filings page in a new tab"
+                          >
+                            Filings
+                          </a>
+                        </>
+                      )
+                    })()}
+                  </div>
+                </div>
+                <table className="w-full text-sm">
+                  <thead className="text-left text-muted-foreground">
+                    <tr>
+                      <th className="py-2 pr-4">Metric</th>
+                      <th className="py-2 pr-4">Value (USD mm)</th>
+                      <th className="py-2">Source / Verify</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      ['ebitda','EBITDA (proxy)'],
+                      ['net_income','Net Income'],
+                      ['interest_expense','Interest Expense'],
+                      ['net_debt','Net Debt'],
+                      ['shareholder_equity','Shareholder Equity'],
+                      ['total_assets','Total Assets'],
+                      ['cash','Cash & Equivalents'],
+                      ['total_debt','Total Debt'],
+                      ['shares_outstanding','Shares Outstanding (mm)'],
+                    ].map(([key,label]) => {
+                      const val = xbrl.metrics_millions[key as keyof XbrlResponse['metrics_millions']] as number | null
+                      const meta = xbrl.facts_meta[key as keyof XbrlResponse['facts_meta']] as XbrlMeta | null
+                      return (
+                        <tr key={key} className="border-t">
+                          <td className="py-2 pr-4 font-medium">{label}</td>
+                          <td className="py-2 pr-4">{val != null ? formatNumber(val) : '-'}</td>
+                          <td className="py-2 text-muted-foreground">
+                            {meta ? (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant={meta.form === '10-Q' ? 'outline' : meta.form === '10-K' ? 'default' : 'outline'}>
+                                  {meta.form || '—'}
+                                </Badge>
+                                <span>{meta.end || '—'}</span>
+                                {meta.frame ? <span className="text-xs">[{meta.frame}]</span> : null}
+                                <Button
+                                  size="xs" variant="outline"
+                                  onClick={() => { if (meta.raw_value != null) navigator.clipboard.writeText(String(meta.raw_value)) }}
+                                  aria-label="Copy raw XBRL value"
+                                >Copy raw</Button>
+                              </div>
+                            ) : '—'}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">{xbrlError || 'No structured metrics available'}</div>
+            )}
+          </CardContent>
+        </Card>
         {/* KPI Charts */}
         {loading ? (
           <LoadingChart className="h-96" />

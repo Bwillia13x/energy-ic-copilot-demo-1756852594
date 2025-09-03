@@ -88,20 +88,20 @@ EPV = Free Cash Flow / WACC
 
 **Given:**
 - EBITDA = $3,450 million
-- Maintenance Capex = $345 million
+- Maintenance Capex = $220 million  # Corrected from filing data
 - Tax Rate = 25%
 - Reinvestment Rate = 15%
 - WACC = 6.78%
 
 **Step-by-step Calculation:**
 ```
-1. Normalized EBIT = $3,450M - $345M = $3,205M
-2. NOPAT = $3,205M × (1 - 0.25) = $2,403.75M
-3. Free Cash Flow = $2,403.75M × (1 - 0.15) = $2,043.19M
-4. EPV = $2,043.19M / 0.0678 ≈ $30,119M
+1. Normalized EBIT = $3,450M - $220M = $3,230M
+2. NOPAT = $3,230M × (1 - 0.25) = $2,422.5M
+3. Free Cash Flow = $2,422.5M × (1 - 0.15) = $2,059.13M
+4. EPV = $2,059.13M / 0.0678 ≈ $30,385M
 ```
 
-**✅ Verified:** EPV ≈ $30,119 million
+**✅ Verified:** EPV ≈ $30,385 million
 
 ---
 

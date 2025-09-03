@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import yaml
@@ -20,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from core.extract import KPIExtractor, extract_kpis_from_filings, ExtractedKPI
 from core.valuation import ValuationEngine, ValuationInputs, ValuationScenario, ValuationResults
 from core.cite import Citation
+from core.data_manager import create_data_manager
 
 # Configuration
 PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -64,6 +66,7 @@ class ValuationRequest(BaseModel):
 
 # Global instances
 valuation_engine = ValuationEngine()
+data_manager = create_data_manager(DATA_DIR)
 
 @app.get("/")
 async def root():
@@ -207,6 +210,19 @@ async def get_mappings(ticker: str):
         raise HTTPException(status_code=404, detail="Mappings file not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error loading mappings: {str(e)}")
+
+@app.get("/xbrl/{ticker}")
+async def get_xbrl_metrics(ticker: str, period: str = Query("any", regex="^(?i)(any|ytd|qtd|quarter)$")):
+    """Return standardized SEC XBRL metrics (millions) for a ticker."""
+    try:
+        res = data_manager.get_latest_financials_xbrl(ticker, period=period)
+        if not res:
+            raise HTTPException(status_code=404, detail="XBRL metrics not available")
+        return res
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching XBRL metrics: {str(e)}")
 
 # Health check for individual services
 @app.get("/health")

@@ -1,5 +1,3 @@
-import { toast } from '@/hooks/use-toast'
-
 export class HttpError extends Error {
   status?: number
   constructor(message: string, status?: number) {
@@ -33,11 +31,16 @@ export const netActivity = {
 }
 
 let lastToastAt = 0
-function notifyErrorOnce(message: string) {
+async function notifyErrorOnce(message: string) {
   const now = Date.now()
   if (now - lastToastAt < 4000) return
   lastToastAt = now
+
+  // Only show toast on client side
+  if (typeof window === 'undefined') return
+
   try {
+    const { toast } = await import('@/hooks/use-toast')
     toast({ title: 'Request failed', description: message, variant: 'destructive' as any })
   } catch {
     // noop if toast not available in this environment
@@ -61,6 +64,7 @@ export async function fetchJsonWithTimeout<T = any>(
   } catch (err: any) {
     const isAbort = err?.name === 'AbortError'
     const httpErr = isAbort ? new HttpError('Request timed out', 408) : err
+    // Don't await to avoid blocking the error throw
     notifyErrorOnce(isAbort ? 'Request timed out' : (httpErr?.message || 'Network error'))
     throw httpErr
   } finally {

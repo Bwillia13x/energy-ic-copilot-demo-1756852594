@@ -8,18 +8,32 @@ const nextConfig = {
     // Disable TypeScript error checks during build for deployment
     ignoreBuildErrors: true,
   },
-  // Standalone output for Vercel deployment
-  output: 'standalone',
   trailingSlash: false,
-  // Disable static optimization to avoid SSR context issues
+  // Stable configuration to prevent server restarts
   experimental: {
     disableOptimizedLoading: true,
   },
+  output: 'standalone',
+  images: {
+    unoptimized: true,
+  },
+  // Static environment variables - no process.env usage to prevent restarts
   env: {
-    // For demo/sampler, default to built-in mock API routes
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '/api/demo',
-    NEXT_PUBLIC_DEMO: process.env.NEXT_PUBLIC_DEMO || '1',
-    NEXT_PUBLIC_REPO_URL: process.env.NEXT_PUBLIC_REPO_URL || 'https://github.com/'
+    NEXT_PUBLIC_API_URL: '/api/demo',
+    NEXT_PUBLIC_DEMO: '1',
+    NEXT_PUBLIC_REPO_URL: 'https://github.com/'
+  },
+  // Disable file watching for config changes
+  webpack: (config, { dev }) => {
+    if (!dev) {
+      return config
+    }
+    // Prevent webpack from watching next.config.js changes
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: /next\.config\.js$/,
+    }
+    return config
   },
 }
 

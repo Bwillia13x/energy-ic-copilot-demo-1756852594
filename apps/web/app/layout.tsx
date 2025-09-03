@@ -3,18 +3,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { ErrorBoundary } from '@/components/error-boundary'
-import { Toaster } from '@/components/ui/toaster'
-import { ThemeProvider } from '@/components/theme-provider'
-import { SiteHeader } from '@/components/site-header'
-import { SiteFooter } from '@/components/site-footer'
-import { ApiHealthBanner } from '@/components/api-health-banner'
-import { DemoBanner } from '@/components/demo-banner'
-import { TopProgress } from '@/components/top-progress'
-import { LoadingProvider } from '@/lib/loading-context'
-import { Analytics } from '@/components/analytics'
-import { PerformanceMonitor } from '@/components/performance-monitor'
-import { KeyboardShortcuts } from '@/components/keyboard-shortcuts'
+import { ClientLayout } from './client-layout'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -66,25 +55,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <TopProgress />
-        <ThemeProvider defaultTheme="system" storageKey="energy-ic-theme">
-          <LoadingProvider>
-            <ErrorBoundary>
-              <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-background border rounded px-3 py-1">Skip to content</a>
-              <DemoBanner />
-              <SiteHeader />
-              <ApiHealthBanner />
-              <div id="main" className="min-h-screen bg-background">
-                {children}
-              </div>
-              <SiteFooter />
-              <Toaster />
-              <Analytics />
-              <PerformanceMonitor />
-              <KeyboardShortcuts />
-            </ErrorBoundary>
-          </LoadingProvider>
-        </ThemeProvider>
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   )

@@ -53,6 +53,8 @@ class ValuationInputs(BaseModel):
     dividend_per_share: Optional[float] = None  # annual dividend per share
     share_price: Optional[float] = None  # current market price
     net_income: Optional[float] = None  # net income for ROE calculation
+    shareholder_equity: Optional[float] = None  # shareholder equity for ROE calculation
+    interest_expense: Optional[float] = None  # interest expense for coverage ratio
 
     # WACC (Weighted Average Cost of Capital) components
     risk_free_rate: float = 0.04  # typically 10-year Treasury yield
@@ -253,13 +255,11 @@ class ValuationEngine:
         if wacc <= 0:
             return {"dcf_value": float('inf'), "components": {}}
 
-        # Simplified FCFF calculation
-        # FCFF = EBITDA - maintenance_capex - taxes - interest + tax shield
+        # FCFF using steady-state assumption where maintenance capex ≈ D&A
+        # FCFF ≈ NOPAT when ΔNWC ~ 0 and D&A ≈ maintenance capex
+        # NOPAT = (EBITDA - maintenance_capex) × (1 - tax_rate)
         normalized_ebit = inputs.ebitda - inputs.maintenance_capex
-        tax_shield = inputs.net_debt * inputs.cost_of_debt * inputs.tax_rate
-
-        # Simplified FCFF (could be more sophisticated)
-        fcff = normalized_ebit * (1 - inputs.tax_rate) + tax_shield
+        fcff = normalized_ebit * (1 - inputs.tax_rate)
 
         # Project cash flows (simplified - constant growth)
         projected_fcffs = []
@@ -271,7 +271,10 @@ class ValuationEngine:
         # Terminal value using Gordon Growth Model
         # TV = FCFF_terminal / (WACC - g)
         # where FCFF_terminal = FCFF_current * (1 + g)
-        terminal_value = (fcff * (1 + inputs.terminal_growth)) / (wacc - inputs.terminal_growth)
+        if wacc <= inputs.terminal_growth:
+            terminal_value = float('inf')
+        else:
+            terminal_value = (fcff * (1 + inputs.terminal_growth)) / (wacc - inputs.terminal_growth)
 
         # Present value of terminal value
         pv_terminal = terminal_value / (1 + wacc) ** inputs.projection_years
@@ -312,17 +315,24 @@ class ValuationEngine:
         """
         Calculate complete valuation including scenarios.
         """
-        # Base case calculations
-        wacc = self.calculate_wacc(inputs)
-        epv = self.calculate_epv(inputs)
-        dcf_result = self.calculate_dcf(inputs)
+        # Apply scenario if provided
+        valuation_inputs = inputs
+        if scenario:
+            valuation_inputs = self.apply_scenario(inputs, scenario)
 
-        cost_of_equity = inputs.risk_free_rate + (inputs.beta * inputs.market_risk_premium)
-        cost_of_debt_after_tax = inputs.cost_of_debt * (1 - inputs.tax_rate)
+        # Calculate valuations using scenario-adjusted inputs
+        wacc = self.calculate_wacc(valuation_inputs)
+        epv = self.calculate_epv(valuation_inputs)
+        dcf_result = self.calculate_dcf(valuation_inputs)
+
+        cost_of_equity = valuation_inputs.risk_free_rate + (valuation_inputs.beta * valuation_inputs.market_risk_premium)
+        cost_of_debt_after_tax = valuation_inputs.cost_of_debt * (1 - valuation_inputs.tax_rate)
 
         # Ratios
-        ev_ebitda_ratio = epv / inputs.ebitda if inputs.ebitda != 0 else 0
-        net_debt_ebitda_ratio = inputs.net_debt / inputs.ebitda if inputs.ebitda != 0 else 0
+        # EV/EBITDA = (Enterprise Value) / EBITDA = (EPV + Net Debt) / EBITDA
+        enterprise_value = epv + valuation_inputs.net_debt
+        ev_ebitda_ratio = enterprise_value / valuation_inputs.ebitda if valuation_inputs.ebitda != 0 else 0
+        net_debt_ebitda_ratio = valuation_inputs.net_debt / valuation_inputs.ebitda if valuation_inputs.ebitda != 0 else 0
 
         # Additional metrics calculations
         roic = None
@@ -333,36 +343,51 @@ class ValuationEngine:
         interest_coverage = None
 
         # Calculate additional metrics if we have the required data
-        if inputs.net_income and inputs.ebitda:
-            # ROIC = NOPAT / (Debt + Equity)
-            nopat = inputs.ebitda * (1 - inputs.tax_rate)
-            total_capital = inputs.net_debt + (epv - inputs.net_debt)  # EV - Debt = Equity
-            roic = nopat / total_capital if total_capital != 0 else None
+        # ROIC = NOPAT / (Invested Capital). Use book-based proxy: Net Debt + Shareholder Equity.
+        if valuation_inputs.ebitda and valuation_inputs.shareholder_equity is not None:
+            normalized_ebit_roic = valuation_inputs.ebitda - valuation_inputs.maintenance_capex
+            nopat_roic = normalized_ebit_roic * (1 - valuation_inputs.tax_rate)
+            invested_capital = (valuation_inputs.net_debt or 0.0) + valuation_inputs.shareholder_equity
+            roic = (nopat_roic / invested_capital) if invested_capital else None
 
-        if inputs.net_income and inputs.shares_outstanding:
-            # ROE = Net Income / Shareholder Equity
-            shareholder_equity = (epv - inputs.net_debt) / inputs.shares_outstanding if inputs.shares_outstanding != 0 else 0
-            roe = inputs.net_income / shareholder_equity if shareholder_equity != 0 else None
+        # ROE = Net Income / Shareholder Equity (use actual shareholder equity if available)
+        if valuation_inputs.net_income and hasattr(valuation_inputs, 'shareholder_equity') and valuation_inputs.shareholder_equity:
+            roe = valuation_inputs.net_income / valuation_inputs.shareholder_equity if valuation_inputs.shareholder_equity != 0 else None
 
-        if inputs.dividend_per_share and inputs.net_income and inputs.shares_outstanding:
+        if valuation_inputs.dividend_per_share and valuation_inputs.net_income and valuation_inputs.shares_outstanding:
             # Payout Ratio = Dividends / Net Income
-            annual_dividends = inputs.dividend_per_share * inputs.shares_outstanding
-            payout_ratio = annual_dividends / inputs.net_income if inputs.net_income != 0 else None
+            annual_dividends = valuation_inputs.dividend_per_share * valuation_inputs.shares_outstanding
+            payout_ratio = annual_dividends / valuation_inputs.net_income if valuation_inputs.net_income != 0 else None
 
-        if inputs.dividend_per_share and inputs.share_price:
+        if valuation_inputs.dividend_per_share and valuation_inputs.share_price:
             # Dividend Yield = Annual Dividend / Share Price
-            dividend_yield = inputs.dividend_per_share / inputs.share_price
+            dividend_yield = valuation_inputs.dividend_per_share / valuation_inputs.share_price
 
-        if inputs.net_debt and inputs.shares_outstanding and inputs.share_price:
-            # Debt-to-Equity = Total Debt / Shareholder Equity
-            shareholder_equity = inputs.shares_outstanding * inputs.share_price
-            debt_to_equity = inputs.net_debt / shareholder_equity if shareholder_equity != 0 else None
+        # Debt-to-Equity = Total Debt / Shareholder Equity
+        # Use actual shareholder equity if available, otherwise calculate from market data
+        if valuation_inputs.net_debt:
+            if hasattr(valuation_inputs, 'shareholder_equity') and valuation_inputs.shareholder_equity and valuation_inputs.shareholder_equity > 0:
+                # Use actual shareholder equity from financial data
+                debt_to_equity = valuation_inputs.net_debt / valuation_inputs.shareholder_equity
+            elif valuation_inputs.shares_outstanding and valuation_inputs.share_price and valuation_inputs.shares_outstanding > 0 and valuation_inputs.share_price > 0:
+                # Fallback to market-based calculation
+                shareholder_equity_market = valuation_inputs.shares_outstanding * valuation_inputs.share_price
+                debt_to_equity = valuation_inputs.net_debt / shareholder_equity_market if shareholder_equity_market != 0 else None
+            else:
+                debt_to_equity = None
 
-        if inputs.ebitda and inputs.net_debt and inputs.cost_of_debt:
-            # Interest Coverage = EBITDA / Interest Expense
-            # Approximate interest expense as cost_of_debt * net_debt
-            interest_expense = inputs.cost_of_debt * inputs.net_debt
-            interest_coverage = inputs.ebitda / interest_expense if interest_expense != 0 else None
+        # Interest Coverage = EBITDA / Interest Expense
+        # Use actual interest expense if available (from financial data), otherwise approximate
+        if valuation_inputs.ebitda:
+            if hasattr(valuation_inputs, 'interest_expense') and valuation_inputs.interest_expense and valuation_inputs.interest_expense > 0:
+                # Use actual interest expense from financial data
+                interest_coverage = valuation_inputs.ebitda / valuation_inputs.interest_expense
+            elif valuation_inputs.net_debt and valuation_inputs.cost_of_debt:
+                # Fallback to approximation: cost_of_debt * net_debt
+                interest_expense_approx = valuation_inputs.cost_of_debt * valuation_inputs.net_debt
+                interest_coverage = valuation_inputs.ebitda / interest_expense_approx if interest_expense_approx != 0 else None
+            else:
+                interest_coverage = None
 
         results = ValuationResults(
             epv=epv,
@@ -394,17 +419,6 @@ class ValuationEngine:
 
 
 def create_sample_inputs() -> ValuationInputs:
-    """Create sample valuation inputs for testing."""
-    return ValuationInputs(
-        ebitda=3450.0,  # $3.45B
-        net_debt=18750.0,  # $18.75B
-        maintenance_capex=220.0,  # $220M
-        tax_rate=0.25,
-        reinvestment_rate=0.15,
-        risk_free_rate=0.04,
-        market_risk_premium=0.06,
-        beta=0.8,
-        cost_of_debt=0.05,
-        debt_weight=0.4,
-        equity_weight=0.6
-    )
+    """Create sample valuation inputs for testing using centralized configuration."""
+    from .config import get_default_valuation_inputs
+    return get_default_valuation_inputs()
