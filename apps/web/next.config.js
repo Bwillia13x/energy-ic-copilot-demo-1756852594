@@ -17,7 +17,6 @@ const nextConfig = {
   experimental: {
     disableOptimizedLoading: true,
   },
-  output: 'standalone',
   images: {
     unoptimized: true,
   },

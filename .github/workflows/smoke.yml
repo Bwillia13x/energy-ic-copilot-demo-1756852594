@@ -1,0 +1,85 @@
+name: Smoke Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Web base URL"
+        default: "https://energy-ic-copilot.vercel.app"
+        required: false
+      api_url:
+        description: "API base URL"
+        default: "https://api-production-e65d.up.railway.app"
+        required: false
+      allow_protected:
+        description: "Allow 401 (Vercel protection)"
+        default: "true"
+        required: false
+      ticker:
+        description: "Ticker to test"
+        default: "PSX"
+        required: false
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check homepage
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://energy-ic-copilot.vercel.app' }}
+          ALLOW_PROTECTED: ${{ github.event.inputs.allow_protected || 'true' }}
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/")
+          echo "GET $BASE_URL/ => $code"
+          if [ "$ALLOW_PROTECTED" = "true" ] && [ "$code" = "401" ]; then
+            echo "Protected (401) accepted"
+          elif [ "$code" = "200" ]; then
+            echo "OK"
+          else
+            echo "Unexpected status: $code" >&2; exit 1
+          fi
+
+      - name: Check company page
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://energy-ic-copilot.vercel.app' }}
+          ALLOW_PROTECTED: ${{ github.event.inputs.allow_protected || 'true' }}
+          TICKER: ${{ github.event.inputs.ticker || 'PSX' }}
+        run: |
+          set -euo pipefail
+          url="$BASE_URL/company/$TICKER"
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$url")
+          echo "GET $url => $code"
+          if [ "$ALLOW_PROTECTED" = "true" ] && [ "$code" = "401" ]; then
+            echo "Protected (401) accepted"
+          elif [ "$code" = "200" ]; then
+            echo "OK"
+          else
+            echo "Unexpected status: $code" >&2; exit 1
+          fi
+
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check API health
+        env:
+          API_URL: ${{ github.event.inputs.api_url || 'https://api-production-e65d.up.railway.app' }}
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/health")
+          echo "GET $API_URL/health => $code"
+          test "$code" = "200"
+          body=$(curl -s "$API_URL/health")
+          echo "$body" | grep -q '"api":"healthy"'
+
+      - name: Check API companies and ticker
+        env:
+          API_URL: ${{ github.event.inputs.api_url || 'https://api-production-e65d.up.railway.app' }}
+          TICKER: ${{ github.event.inputs.ticker || 'PSX' }}
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/companies")
+          echo "GET $API_URL/companies => $code"; test "$code" = "200"
+          code=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/companies/$TICKER")
+          echo "GET $API_URL/companies/$TICKER => $code"; test "$code" = "200"
+
