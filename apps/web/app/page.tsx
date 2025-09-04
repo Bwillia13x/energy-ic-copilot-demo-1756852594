@@ -10,9 +10,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { GitCompare, BarChart3, HelpCircle, Search, X, Star, StarOff, Copy, Download, Upload, CheckSquare, Square } from 'lucide-react'
+import { GitCompare, BarChart3, HelpCircle, Search, X, Star, StarOff, Copy, Download, Upload, CheckSquare, Square, Calculator, TrendingUp } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
-import { LoadingCard, LoadingSkeleton } from '@/components/ui/loading'
+import { LoadingCard, LoadingSkeleton, Skeleton, CompanyCardSkeleton } from '@/components/ui/loading'
 import { fetchJsonWithRetry, HttpError } from '@/lib/http'
 import { DemoTour } from '@/components/demo-tour'
 
@@ -30,6 +30,9 @@ function HomePageContent() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [searchSuggestions, setSearchSuggestions] = useState<{ text: string; type: 'company' | 'ticker' | 'sector' | 'country' | 'recent' }[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<'name' | 'ticker' | 'sector'>('name')
   const [sectors, setSectors] = useState<string[]>([])
   const [countries, setCountries] = useState<string[]>([])
@@ -42,6 +45,7 @@ function HomePageContent() {
   const [newSetName, setNewSetName] = useState('')
   const inputRef = useRef<HTMLInputElement | null>(null)
   const importRef = useRef<HTMLInputElement | null>(null)
+  const suggestionsRef = useRef<HTMLDivElement | null>(null)
   const { toast } = useToast()
 
   const router = useRouter()
@@ -119,6 +123,117 @@ function HomePageContent() {
       window.localStorage.setItem('compare-saved-sets', JSON.stringify(savedSets))
     }
   }, [savedSets])
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = window.localStorage.getItem('recent-searches')
+        if (saved) setRecentSearches(JSON.parse(saved))
+      } catch {}
+    }
+  }, [])
+
+  // Generate fuzzy search suggestions
+  const generateSuggestions = (searchTerm: string) => {
+    if (!searchTerm || searchTerm.length < 2) {
+      // Show recent searches if no query
+      return recentSearches.slice(0, 5).map(term => ({ text: term, type: 'recent' as const }));
+    }
+
+    const suggestions: { text: string; type: 'company' | 'ticker' | 'sector' | 'country' }[] = []
+
+    // Fuzzy search through companies
+    Object.values(companies).forEach(company => {
+      const companyName = company.name.toLowerCase()
+      const ticker = company.ticker.toLowerCase()
+      const sector = company.sector.toLowerCase()
+      const country = company.country.toLowerCase()
+      const search = searchTerm.toLowerCase()
+
+      // Simple fuzzy matching
+      if (companyName.includes(search) || search.includes(companyName.slice(0, 3))) {
+        suggestions.push({ text: company.name, type: 'company' })
+      }
+      if (ticker.includes(search) || search.includes(ticker)) {
+        suggestions.push({ text: company.ticker, type: 'ticker' })
+      }
+      if (sector.includes(search)) {
+        suggestions.push({ text: company.sector, type: 'sector' })
+      }
+      if (country.includes(search)) {
+        suggestions.push({ text: company.country, type: 'country' })
+      }
+    })
+
+    // Remove duplicates and limit results
+    const uniqueSuggestions = suggestions
+      .filter((s, index, arr) =>
+        arr.findIndex(x => x.text === s.text && x.type === s.type) === index
+      )
+      .slice(0, 8)
+
+    return uniqueSuggestions
+  }
+
+  // Handle search input
+  const handleSearchChange = (value: string) => {
+    setQuery(value)
+
+    if (value.trim()) {
+      const suggestions = generateSuggestions(value.trim())
+      setSearchSuggestions(suggestions)
+      setShowSuggestions(suggestions.length > 0)
+    } else {
+      setSearchSuggestions([])
+      setShowSuggestions(false)
+    }
+  }
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = (suggestion: { text: string; type: 'company' | 'ticker' | 'sector' | 'country' | 'recent' }) => {
+    setQuery(suggestion.text)
+    setShowSuggestions(false)
+
+    // Add to recent searches
+    const updated = [suggestion.text, ...recentSearches.filter(s => s !== suggestion.text)].slice(0, 10)
+    setRecentSearches(updated)
+
+    // Persist recent searches
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('recent-searches', JSON.stringify(updated))
+    }
+
+    // Focus on search input or clear for direct search
+    inputRef.current?.focus()
+  }
+
+  // Handle search submission
+  const handleSearchSubmit = () => {
+    if (query.trim()) {
+      // Add to recent searches
+      const updated = [query.trim(), ...recentSearches.filter(s => s !== query.trim())].slice(0, 10)
+      setRecentSearches(updated)
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('recent-searches', JSON.stringify(updated))
+      }
+    }
+    setShowSuggestions(false)
+  }
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionsRef.current && !suggestionsRef.current.contains(event.target as Node) &&
+          inputRef.current && !inputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const fetchCompanies = async () => {
     try {
@@ -262,15 +377,73 @@ function HomePageContent() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold mb-2">Energy IC Copilot</h1>
-          <p className="text-muted-foreground">Loading companies...</p>
+      <div className="container mx-auto px-4 py-10">
+        <div className="text-center mb-12">
+          <div className="mb-3">
+            <Skeleton className="h-12 w-80 mx-auto mb-4" />
+            <Skeleton className="h-6 w-96 mx-auto" />
+          </div>
+          <Skeleton className="h-8 w-32 mx-auto mt-8" />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        {/* Quick Start Skeleton */}
+        <div className="max-w-4xl mx-auto mb-10">
+          <div className="p-6 border rounded-xl bg-gradient-to-br from-muted/40 to-background">
+            <div className="flex items-start gap-3">
+              <Skeleton className="w-5 h-5 mt-0.5" />
+              <div className="text-left w-full">
+                <Skeleton className="h-4 w-20 mb-1" />
+                <Skeleton className="h-4 w-96 mb-4" />
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="p-2 rounded-lg bg-background border flex items-center gap-2">
+                      <Skeleton className="h-5 w-5 rounded-full" />
+                      <Skeleton className={`h-4 ${i % 2 === 0 ? 'w-16' : 'w-12'}`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search + Filters Skeleton */}
+        <div className="max-w-5xl mx-auto mb-8">
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+            <Skeleton className="h-10 flex-1" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i}>
+                <Skeleton className="h-4 w-24 mb-2" />
+                <div className="flex gap-2">
+                  {Array.from({ length: 3 }).map((_, j) => (
+                    <Skeleton key={j} className="h-6 w-16 rounded" />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className={`h-8 ${i === 0 ? 'w-28' : 'w-24'}`} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Company Grid Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <LoadingCard key={i} title="Loading company" description="Fetching details..." />
+            <CompanyCardSkeleton key={i} />
           ))}
+        </div>
+
+        {/* Comparison Section Skeleton */}
+        <div className="mt-16 text-center">
+          <Skeleton className="h-32 w-80 mx-auto" />
         </div>
       </div>
     )
@@ -311,16 +484,41 @@ function HomePageContent() {
             <div className="text-left w-full">
               <h2 className="font-semibold mb-1">Quick start</h2>
               <p className="text-sm text-muted-foreground">Select a company, review KPIs, adjust scenario assumptions, then export a memo.</p>
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
                 {[
-                  'Pick a company',
-                  'Explore KPIs',
-                  'Adjust assumptions',
-                  'Export memo',
+                  {
+                    label: 'Pick a company',
+                    action: () => {
+                      const input = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement
+                      input?.focus()
+                    }
+                  },
+                  {
+                    label: 'Explore KPIs',
+                    action: () => {
+                      const firstTicker = Object.keys(companies)[0]
+                      if (firstTicker) router.push(`/company/${firstTicker}`)
+                    }
+                  },
+                  {
+                    label: 'Adjust assumptions',
+                    action: () => router.push('/tools/valuation')
+                  },
+                  {
+                    label: 'Export memo',
+                    action: () => {
+                      const firstTicker = Object.keys(companies)[0]
+                      if (firstTicker) router.push(`/memo/${firstTicker}`)
+                    }
+                  },
                 ].map((step, i) => (
-                  <div key={i} className="p-2 rounded-lg bg-background border flex items-center gap-2">
+                  <div key={i} className="p-2 rounded-lg bg-background border flex items-center gap-2 hover:bg-primary/5 transition-colors cursor-pointer"
+                       onClick={() => {
+                         if (step.action) step.action()
+                         toast({ title: `Step ${i + 1}: ${step.label}`, description: 'Guide completed' })
+                       }}>
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-[11px] font-medium">{i + 1}</span>
-                    <span>{step}</span>
+                    <span>{step.label}</span>
                   </div>
                 ))}
               </div>
@@ -337,20 +535,64 @@ function HomePageContent() {
             <Input
               ref={inputRef}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by company or ticker"
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearchSubmit()
+                } else if (e.key === 'Escape') {
+                  setShowSuggestions(false)
+                }
+              }}
+              placeholder="Search companies, tickers, sectors, or countries..."
               className="pl-9 pr-9"
               aria-label="Search companies"
+              autoComplete="off"
             />
             {query && (
               <button
                 type="button"
-                onClick={() => { setQuery(''); inputRef.current?.focus() }}
+                onClick={() => {
+                  setQuery('')
+                  setShowSuggestions(false)
+                  inputRef.current?.focus()
+                }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60"
                 aria-label="Clear search"
               >
                 <X className="w-4 h-4" />
               </button>
+            )}
+
+            {/* Search Suggestions Dropdown */}
+            {showSuggestions && searchSuggestions.length > 0 && (
+              <div
+                ref={suggestionsRef}
+                className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-md shadow-lg z-10 max-h-64 overflow-y-auto"
+                role="listbox"
+                aria-label="Search suggestions"
+              >
+                {searchSuggestions.map((suggestion, index) => (
+                  <button
+                    key={`${suggestion.text}-${suggestion.type}-${index}`}
+                    type="button"
+                    onClick={() => handleSuggestionSelect(suggestion)}
+                    className="w-full px-4 py-2 text-left hover:bg-muted/50 focus:bg-muted/50 focus:outline-none flex items-center justify-between"
+                    role="option"
+                  >
+                    <div className="flex items-center gap-2">
+                      {suggestion.type === 'company' && <TrendingUp className="w-4 h-4 text-primary" />}
+                      {suggestion.type === 'ticker' && <Search className="w-4 h-4 text-blue-500" />}
+                      {suggestion.type === 'sector' && <BarChart3 className="w-4 h-4 text-green-500" />}
+                      {suggestion.type === 'country' && <span className="w-4 h-4 text-center text-xs bg-muted rounded">🌍</span>}
+                      {suggestion.type === 'recent' && <span className="w-4 h-4 text-center text-xs bg-muted rounded">🕒</span>}
+                      <span className="truncate">{suggestion.text}</span>
+                    </div>
+                    <Badge variant="outline" className="text-xs capitalize">
+                      {suggestion.type}
+                    </Badge>
+                  </button>
+                ))}
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -370,7 +612,7 @@ function HomePageContent() {
         </div>
 
         {/* Faceted filters and controls */}
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <div className="text-sm font-medium mb-2">Filter by Sector</div>
             <div className="flex flex-wrap gap-2">
@@ -401,7 +643,7 @@ function HomePageContent() {
           </div>
         </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
               className={`px-3 py-1.5 border rounded text-sm ${showFavoritesOnly ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
               onClick={() => setShowFavoritesOnly(v => !v)}
@@ -459,7 +701,7 @@ function HomePageContent() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {filteredEntries
           .sort((a, b) => {
             if (sortBy === 'name') {
@@ -473,49 +715,77 @@ function HomePageContent() {
             return s !== 0 ? s : a[1].name.localeCompare(b[1].name)
           })
           .map(([ticker, company]) => (
-          <Card key={ticker} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
+          <Card key={ticker} className="group relative overflow-hidden bg-gradient-to-br from-background via-background to-muted/20 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 border hover:border-primary/50">
+            <CardHeader className="relative pb-3">
               <CardTitle className="flex items-center justify-between gap-2">
-                <span className="truncate" title={company.name}>{company.name}</span>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">{ticker}</Badge>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <span className="text-lg font-bold text-primary">{ticker.slice(0, 2).toUpperCase()}</span>
+                  </div>
+                  <div>
+                    <span className="truncate font-semibold group-hover:text-primary transition-colors" title={company.name}>{company.name}</span>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {company.sector}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Badge variant="outline" className="bg-background/50 font-mono">{ticker}</Badge>
                   <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border hover:bg-muted"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border hover:bg-muted hover:scale-110 transition-all duration-200"
                     onClick={() => toggleFavorite(ticker)}
                     aria-label={favorites.includes(ticker) ? 'Unfavorite' : 'Favorite'}
                   >
-                    {favorites.includes(ticker) ? <Star className="w-4 h-4 text-yellow-500" /> : <StarOff className="w-4 h-4" />}
+                    {favorites.includes(ticker) ? <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" /> : <StarOff className="w-4 h-4" />}
                   </button>
                   <button
-                    className={`inline-flex h-8 px-2 items-center justify-center rounded-md border text-xs ${selectedTickers.includes(ticker) ? 'bg-primary text-primary-foreground' : 'bg-background'}`}
+                    className={`inline-flex h-8 px-3 items-center justify-center rounded-md border text-xs font-medium transition-all duration-200 ${
+                      selectedTickers.includes(ticker)
+                        ? 'bg-primary text-primary-foreground shadow-md hover:bg-primary/90'
+                        : 'hover:bg-muted hover:shadow-sm'
+                    }`}
                     onClick={() => toggleSelect(ticker)}
                     aria-pressed={selectedTickers.includes(ticker)}
                   >
-                    {selectedTickers.includes(ticker) ? 'Selected' : 'Select'}
+                    {selectedTickers.includes(ticker) ? '✓ Selected' : '+ Select'}
                   </button>
                 </div>
               </CardTitle>
-              <CardDescription>
-                {company.sector} • {company.country}
+              <CardDescription className="flex items-center gap-2">
+                <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+                {company.country}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Currency:</span>
-                  <span>{company.currency}</span>
+              <div className="space-y-3 mb-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="w-1 h-1 bg-muted-foreground/60 rounded-full"></span>
+                    Currency
+                  </span>
+                  <Badge variant="secondary" className="text-xs">{company.currency}</Badge>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Fiscal Year End:</span>
-                  <span>{company.fiscal_year_end}</span>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <span className="w-1 h-1 bg-muted-foreground/60 rounded-full"></span>
+                    FY End
+                  </span>
+                  <span className="text-xs font-medium">{company.fiscal_year_end}</span>
                 </div>
               </div>
               <Link href={`/company/${ticker}`}>
-                <Button className="w-full">
+                <Button className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200 group-hover:shadow-md">
+                  <Calculator className="w-4 h-4 mr-2" />
                   Analyze {ticker}
                 </Button>
               </Link>
             </CardContent>
+
+            {/* Gradient overlay for visual enhancement */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+            {/* Hover indicator */}
+            <div className="absolute top-4 right-4 w-2 h-2 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
           </Card>
         ))}
       </div>

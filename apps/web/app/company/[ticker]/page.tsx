@@ -146,6 +146,7 @@ export default function CompanyPage() {
     try {
       setLoading(true)
       setError(null)
+      console.log(`Fetching data for ticker: ${ticker}`)
 
       // Fetch company info
       const companyData = await fetchJsonWithRetry<Company>(
@@ -153,6 +154,7 @@ export default function CompanyPage() {
         undefined,
         { timeoutMs: 8000, retries: 2, backoffMs: 500 }
       )
+      console.log('Company data fetched:', companyData)
       setCompany(companyData)
 
       // Fetch KPIs with better error handling
@@ -345,7 +347,7 @@ export default function CompanyPage() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Link href="/" aria-label="Navigate back to companies list">
+            <Link href="/" aria-label="Navigate back to companies list" prefetch={false}>
               <Button
                 variant="outline"
                 size="sm"

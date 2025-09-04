@@ -64,12 +64,17 @@ export function CompanyComparison({
   }, [comparisonMetricProp])
 
   const handleCompanyToggle = (ticker: string) => {
-    const newSelection = selectedCompanies.includes(ticker)
-      ? selectedCompanies.filter(t => t !== ticker)
-      : [...selectedCompanies, ticker]
+    try {
+      const newSelection = selectedCompanies.includes(ticker)
+        ? selectedCompanies.filter(t => t !== ticker)
+        : [...selectedCompanies, ticker]
 
-    setSelectedCompanies(newSelection)
-    onSelectionChange?.(newSelection)
+      setSelectedCompanies(newSelection)
+      onSelectionChange?.(newSelection)
+    } catch (error) {
+      console.error('Error updating selection:', error)
+      // Show a toast or fallback UI instead of crashing
+    }
   }
 
   const selectedCompanyData = companies.filter(company =>

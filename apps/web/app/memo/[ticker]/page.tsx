@@ -181,7 +181,7 @@ export default function MemoPage() {
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-8">Error</h1>
           <p className="text-red-600 mb-4">{error}</p>
-          <Link href={`/company/${ticker}`}>
+          <Link href={`/company/${ticker}`} prefetch={false}>
             <Button>
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Analysis

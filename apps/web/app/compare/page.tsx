@@ -323,7 +323,16 @@ function ComparePageContent() {
   }
 
   const handleSelectionChange = (tickers: string[]) => {
-    setSelectedTickers(tickers)
+    try {
+      setSelectedTickers(tickers)
+    } catch (error) {
+      console.error('Error updating selection:', error)
+      toast({
+        title: "Selection Error",
+        description: "Failed to update company selection. Please try again.",
+        variant: "destructive"
+      })
+    }
   }
 
   // Filter and sort companies for display/selection
