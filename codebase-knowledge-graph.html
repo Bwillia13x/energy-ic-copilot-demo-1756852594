@@ -15,7 +15,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
             background: white;
             border-radius: 12px;
@@ -40,6 +40,29 @@
             margin: 10px 0 0 0;
             opacity: 0.9;
             font-size: 1.1em;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.8;
         }
 
         .controls {
@@ -90,7 +113,7 @@
         }
 
         #graph {
-            height: 800px;
+            height: 900px;
             position: relative;
             border-top: 1px solid #e9ecef;
         }
@@ -151,6 +174,10 @@
             fill: #bb8fce;
         }
 
+        .node.scripts {
+            fill: #a8e6cf;
+        }
+
         .legend {
             position: absolute;
             top: 20px;
@@ -160,6 +187,7 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             z-index: 1000;
+            max-width: 200px;
         }
 
         .legend-item {
@@ -179,14 +207,14 @@
 
         .tooltip {
             position: absolute;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.9);
             color: white;
             padding: 12px;
             border-radius: 6px;
             font-size: 14px;
             pointer-events: none;
             z-index: 1000;
-            max-width: 300px;
+            max-width: 350px;
             opacity: 0;
             transition: opacity 0.3s;
         }
@@ -199,7 +227,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 400px;
+            max-width: 450px;
             display: none;
         }
 
@@ -245,13 +273,66 @@
             font-size: 12px;
             font-weight: 500;
         }
+
+        .file-count {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        .search-box {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            background: white;
+            width: 200px;
+        }
+
+        .search-results {
+            position: absolute;
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1001;
+            display: none;
+        }
+
+        .search-result {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .search-result:hover {
+            background: #f8f9fa;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🚀 Energy IC Copilot</h1>
-            <p>Codebase Knowledge Graph - Development Setup & Architecture</p>
+            <p>Codebase Knowledge Graph - AI-Powered Investment Banking Intelligence</p>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number">2</div>
+                    <div class="stat-label">Applications</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">7</div>
+                    <div class="stat-label">Core Modules</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">25+</div>
+                    <div class="stat-label">Components</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">50+</div>
+                    <div class="stat-label">Files</div>
+                </div>
+            </div>
         </div>
 
         <div class="controls">
@@ -270,7 +351,13 @@
                     <option value="backend">Backend Only</option>
                     <option value="data">Data Layer</option>
                     <option value="deployment">Deployment</option>
+                    <option value="core">Core Modules</option>
                 </select>
+            </div>
+
+            <div class="control-group">
+                <input type="text" id="search-box" class="search-box" placeholder="Search components...">
+                <div id="search-results" class="search-results"></div>
             </div>
 
             <div class="control-group">
@@ -314,6 +401,10 @@
                 <div class="legend-color" style="background: #bb8fce;"></div>
                 <span>Deployment</span>
             </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #a8e6cf;"></div>
+                <span>Scripts</span>
+            </div>
         </div>
 
         <div id="tooltip" class="tooltip"></div>
@@ -331,58 +422,345 @@
     </div>
 
     <script>
-        // Knowledge graph data
+        // Knowledge graph data based on actual codebase analysis
         const graphData = {
             nodes: [
                 // Root level
-                { id: "root", name: "Energy IC Copilot", type: "root", level: 0, description: "Main project root - Monorepo structure for energy infrastructure analysis platform", tech: ["Monorepo", "Git"] },
+                { 
+                    id: "root", 
+                    name: "Energy IC Copilot", 
+                    type: "root", 
+                    level: 0, 
+                    description: "AI-Powered Investment Banking Intelligence for Energy Infrastructure - Monorepo structure with Next.js frontend and FastAPI backend", 
+                    tech: ["Monorepo", "Git", "TypeScript", "Python"],
+                    fileCount: "50+ files"
+                },
 
                 // Applications
-                { id: "web-app", name: "Web App (Next.js)", type: "app", level: 1, description: "Frontend application built with Next.js 14, TypeScript, and Tailwind CSS", tech: ["Next.js", "React", "TypeScript", "Tailwind CSS"] },
-                { id: "api-app", name: "API App (FastAPI)", type: "app", level: 1, description: "Backend API built with FastAPI, providing KPI extraction and valuation services", tech: ["FastAPI", "Python", "Uvicorn", "Pydantic"] },
+                { 
+                    id: "web-app", 
+                    name: "Web App (Next.js)", 
+                    type: "app", 
+                    level: 1, 
+                    description: "Frontend application built with Next.js 14, TypeScript, Tailwind CSS, and Radix UI components", 
+                    tech: ["Next.js 14", "React 18", "TypeScript", "Tailwind CSS", "Radix UI", "Recharts"],
+                    fileCount: "25+ files"
+                },
+                { 
+                    id: "api-app", 
+                    name: "API App (FastAPI)", 
+                    type: "app", 
+                    level: 1, 
+                    description: "Backend API built with FastAPI, providing KPI extraction, valuation calculations, and data management services", 
+                    tech: ["FastAPI", "Python 3", "Uvicorn", "Pydantic", "CORS"],
+                    fileCount: "8 files"
+                },
 
                 // Web App components
-                { id: "web-pages", name: "Pages & Routes", type: "app", level: 2, description: "Next.js pages including company analysis, comparison, and valuation tools", tech: ["Next.js Routing", "App Router"] },
-                { id: "web-components", name: "UI Components", type: "app", level: 2, description: "Reusable React components using Radix UI and custom styling", tech: ["React Components", "Radix UI", "Tailwind"] },
-                { id: "web-api-routes", name: "API Routes", type: "app", level: 2, description: "Next.js API routes for demo data and PDF processing", tech: ["Next.js API", "Serverless Functions"] },
-                { id: "web-hooks", name: "Custom Hooks", type: "app", level: 2, description: "React hooks for data fetching, state management, and utilities", tech: ["React Hooks", "Custom Hooks"] },
+                { 
+                    id: "web-pages", 
+                    name: "Pages & Routes", 
+                    type: "app", 
+                    level: 2, 
+                    description: "Next.js App Router pages including company analysis, comparison tools, valuation calculator, and memo generation", 
+                    tech: ["Next.js App Router", "Dynamic Routes", "Server Components"],
+                    fileCount: "6 pages"
+                },
+                { 
+                    id: "web-components", 
+                    name: "UI Components", 
+                    type: "app", 
+                    level: 2, 
+                    description: "Reusable React components using Radix UI primitives, custom styling, and data visualization components", 
+                    tech: ["React Components", "Radix UI", "Tailwind CSS", "Recharts", "Lucide Icons"],
+                    fileCount: "20+ components"
+                },
+                { 
+                    id: "web-api-routes", 
+                    name: "API Routes", 
+                    type: "app", 
+                    level: 2, 
+                    description: "Next.js API routes for demo data, PDF processing, and internal API endpoints", 
+                    tech: ["Next.js API Routes", "Serverless Functions", "Puppeteer"],
+                    fileCount: "2 routes"
+                },
+                { 
+                    id: "web-hooks", 
+                    name: "Custom Hooks", 
+                    type: "app", 
+                    level: 2, 
+                    description: "React hooks for data fetching, state management, toast notifications, and utilities", 
+                    tech: ["React Hooks", "Custom Hooks", "TanStack Query"],
+                    fileCount: "1 hook"
+                },
+                { 
+                    id: "web-lib", 
+                    name: "Utilities & Lib", 
+                    type: "app", 
+                    level: 2, 
+                    description: "Utility functions, type definitions, and shared libraries for the frontend", 
+                    tech: ["TypeScript", "Utility Functions", "Type Definitions"],
+                    fileCount: "Multiple files"
+                },
 
                 // API App components
-                { id: "api-endpoints", name: "API Endpoints", type: "app", level: 2, description: "RESTful endpoints for companies, KPIs, valuations, and XBRL data", tech: ["REST API", "FastAPI", "CORS"] },
-                { id: "api-health", name: "Health Monitoring", type: "app", level: 2, description: "Health check endpoints and service monitoring", tech: ["Health Checks", "Monitoring"] },
+                { 
+                    id: "api-endpoints", 
+                    name: "API Endpoints", 
+                    type: "app", 
+                    level: 2, 
+                    description: "RESTful endpoints for companies, KPIs, valuations, XBRL data, and health monitoring", 
+                    tech: ["REST API", "FastAPI", "Pydantic Models", "HTTP Methods"],
+                    fileCount: "Multiple endpoints"
+                },
+                { 
+                    id: "api-health", 
+                    name: "Health Monitoring", 
+                    type: "app", 
+                    level: 2, 
+                    description: "Health check endpoints, service monitoring, and API status reporting", 
+                    tech: ["Health Checks", "Monitoring", "Status Endpoints"],
+                    fileCount: "Built-in"
+                },
 
-                // Core modules
-                { id: "core-extract", name: "KPI Extractor", type: "core", level: 1, description: "Core module for extracting KPIs from SEC filings and documents", tech: ["Python", "NLP", "Document Processing"] },
-                { id: "core-valuation", name: "Valuation Engine", type: "core", level: 1, description: "Financial valuation calculations and scenario modeling", tech: ["Python", "Financial Modeling", "Monte Carlo"] },
-                { id: "core-cite", name: "Citation System", type: "core", level: 1, description: "Citation and source tracking for extracted data", tech: ["Python", "Citation Management"] },
-                { id: "core-edgar", name: "EDGAR Client", type: "core", level: 1, description: "SEC EDGAR API client for regulatory filings", tech: ["SEC API", "Python", "HTTP Client"] },
-                { id: "core-xbrl", name: "XBRL Processor", type: "core", level: 1, description: "XBRL financial data processing and standardization", tech: ["XBRL", "Python", "Financial Data"] },
-                { id: "core-data", name: "Data Manager", type: "core", level: 1, description: "Central data management and caching layer", tech: ["Python", "Data Management", "Caching"] },
+                // Core modules (from actual core/ directory)
+                { 
+                    id: "core-extract", 
+                    name: "KPI Extractor", 
+                    type: "core", 
+                    level: 1, 
+                    description: "Core module for extracting KPIs from SEC filings, MDA sections, and financial documents using NLP", 
+                    tech: ["Python", "NLP", "Document Processing", "PDF Parsing", "Text Analysis"],
+                    fileCount: "1 file (408 lines)"
+                },
+                { 
+                    id: "core-valuation", 
+                    name: "Valuation Engine", 
+                    type: "core", 
+                    level: 1, 
+                    description: "Financial valuation calculations, DCF modeling, scenario analysis, and Monte Carlo simulations", 
+                    tech: ["Python", "Financial Modeling", "DCF", "Monte Carlo", "NumPy"],
+                    fileCount: "1 file (564 lines)"
+                },
+                { 
+                    id: "core-cite", 
+                    name: "Citation System", 
+                    type: "core", 
+                    level: 1, 
+                    description: "Citation and source tracking system for extracted data and financial calculations", 
+                    tech: ["Python", "Citation Management", "Source Tracking"],
+                    fileCount: "1 file (92 lines)"
+                },
+                { 
+                    id: "core-edgar", 
+                    name: "EDGAR Client", 
+                    type: "core", 
+                    level: 1, 
+                    description: "SEC EDGAR API client for fetching regulatory filings, company data, and financial documents", 
+                    tech: ["SEC API", "Python", "HTTP Client", "Requests", "XML Parsing"],
+                    fileCount: "1 file (414 lines)"
+                },
+                { 
+                    id: "core-xbrl", 
+                    name: "XBRL Processor", 
+                    type: "core", 
+                    level: 1, 
+                    description: "XBRL financial data processing, standardization, and extraction from SEC filings", 
+                    tech: ["XBRL", "Python", "Financial Data", "XML Processing"],
+                    fileCount: "1 file (294 lines)"
+                },
+                { 
+                    id: "core-data", 
+                    name: "Data Manager", 
+                    type: "core", 
+                    level: 1, 
+                    description: "Central data management, caching layer, and data persistence for the application", 
+                    tech: ["Python", "Data Management", "Caching", "File I/O"],
+                    fileCount: "1 file (518 lines)"
+                },
+                { 
+                    id: "core-config", 
+                    name: "Configuration", 
+                    type: "core", 
+                    level: 1, 
+                    description: "Configuration management, environment variables, and application settings", 
+                    tech: ["Python", "Configuration", "Environment Variables", "YAML"],
+                    fileCount: "1 file (188 lines)"
+                },
 
                 // Data layer
-                { id: "data-filings", name: "SEC Filings", type: "data", level: 1, description: "Raw SEC filing documents and MDA sections", tech: ["SEC Filings", "Financial Documents"] },
-                { id: "data-companies", name: "Company Data", type: "data", level: 1, description: "Company metadata, tickers, and basic information", tech: ["YAML", "Company Data"] },
-                { id: "data-mappings", name: "KPI Mappings", type: "data", level: 1, description: "Mapping configurations for KPI extraction", tech: ["YAML", "Configuration"] },
-                { id: "data-defaults", name: "Default Inputs", type: "data", level: 1, description: "Default financial inputs and presets", tech: ["JSON", "Configuration"] },
+                { 
+                    id: "data-filings", 
+                    name: "SEC Filings", 
+                    type: "data", 
+                    level: 1, 
+                    description: "Raw SEC filing documents, MDA sections, and processed financial data", 
+                    tech: ["SEC Filings", "Financial Documents", "PDF Files", "Text Data"],
+                    fileCount: "Multiple files"
+                },
+                { 
+                    id: "data-companies", 
+                    name: "Company Data", 
+                    type: "data", 
+                    level: 1, 
+                    description: "Company metadata, tickers, basic information, and configuration data", 
+                    tech: ["YAML", "Company Data", "Metadata"],
+                    fileCount: "1 file (96 lines)"
+                },
+                { 
+                    id: "data-mappings", 
+                    name: "KPI Mappings", 
+                    type: "data", 
+                    level: 1, 
+                    description: "Mapping configurations for KPI extraction, field definitions, and data transformations", 
+                    tech: ["YAML", "Configuration", "Data Mapping"],
+                    fileCount: "1 file (463 lines)"
+                },
+                { 
+                    id: "data-defaults", 
+                    name: "Default Inputs", 
+                    type: "data", 
+                    level: 1, 
+                    description: "Default financial inputs, presets, and demo data for the application", 
+                    tech: ["JSON", "YAML", "Configuration", "Demo Data"],
+                    fileCount: "3 files"
+                },
 
                 // Documentation
-                { id: "docs-readme", name: "README & Setup", type: "docs", level: 1, description: "Project documentation, setup guides, and getting started", tech: ["Markdown", "Documentation"] },
-                { id: "docs-api", name: "API Documentation", type: "docs", level: 1, description: "API endpoint documentation and integration guides", tech: ["Markdown", "API Docs"] },
-                { id: "docs-deployment", name: "Deployment Guides", type: "docs", level: 1, description: "Production deployment and infrastructure guides", tech: ["Markdown", "DevOps"] },
-                { id: "docs-calc", name: "Calculations", type: "docs", level: 1, description: "Mathematical verification and calculation methodologies", tech: ["Markdown", "Mathematics"] },
+                { 
+                    id: "docs-readme", 
+                    name: "README & Setup", 
+                    type: "docs", 
+                    level: 1, 
+                    description: "Project documentation, setup guides, getting started instructions, and business value proposition", 
+                    tech: ["Markdown", "Documentation", "Setup Guides"],
+                    fileCount: "2 files (558+ lines)"
+                },
+                { 
+                    id: "docs-api", 
+                    name: "API Documentation", 
+                    type: "docs", 
+                    level: 1, 
+                    description: "API endpoint documentation, integration guides, and technical specifications", 
+                    tech: ["Markdown", "API Docs", "Technical Specs"],
+                    fileCount: "Multiple files"
+                },
+                { 
+                    id: "docs-deployment", 
+                    name: "Deployment Guides", 
+                    type: "docs", 
+                    level: 1, 
+                    description: "Production deployment guides, infrastructure setup, and DevOps documentation", 
+                    tech: ["Markdown", "DevOps", "Deployment"],
+                    fileCount: "Multiple files"
+                },
 
                 // Configuration
-                { id: "config-vercel", name: "Vercel Config", type: "config", level: 1, description: "Vercel deployment configuration for frontend", tech: ["Vercel", "JSON", "Deployment"] },
-                { id: "config-sec", name: "SEC Update Config", type: "config", level: 1, description: "Configuration for SEC data updates and processing", tech: ["YAML", "Configuration"] },
+                { 
+                    id: "config-vercel", 
+                    name: "Vercel Config", 
+                    type: "config", 
+                    level: 1, 
+                    description: "Vercel deployment configuration for frontend application with serverless functions", 
+                    tech: ["Vercel", "JSON", "Deployment", "Serverless"],
+                    fileCount: "2 files"
+                },
+                { 
+                    id: "config-package", 
+                    name: "Package Configs", 
+                    type: "config", 
+                    level: 1, 
+                    description: "Package.json files, dependencies, and build configurations for both apps", 
+                    tech: ["NPM", "Package.json", "Dependencies", "Build Config"],
+                    fileCount: "2 files"
+                },
+                { 
+                    id: "config-typescript", 
+                    name: "TypeScript Config", 
+                    type: "config", 
+                    level: 1, 
+                    description: "TypeScript configuration, type checking, and compilation settings", 
+                    tech: ["TypeScript", "TSConfig", "Type Checking"],
+                    fileCount: "2 files"
+                },
 
                 // Testing
-                { id: "tests-unit", name: "Unit Tests", type: "tests", level: 1, description: "Unit tests for core modules and functions", tech: ["Python", "Unit Testing", "pytest"] },
-                { id: "tests-integration", name: "Integration Tests", type: "tests", level: 1, description: "Integration tests for API endpoints and workflows", tech: ["Python", "Integration Testing"] },
+                { 
+                    id: "tests-unit", 
+                    name: "Unit Tests", 
+                    type: "tests", 
+                    level: 1, 
+                    description: "Unit tests for core modules, functions, and API endpoints using pytest", 
+                    tech: ["Python", "pytest", "Unit Testing", "Test Coverage"],
+                    fileCount: "Multiple files"
+                },
+                { 
+                    id: "tests-integration", 
+                    name: "Integration Tests", 
+                    type: "tests", 
+                    level: 1, 
+                    description: "Integration tests for API endpoints, workflows, and end-to-end functionality", 
+                    tech: ["Python", "Integration Testing", "API Testing"],
+                    fileCount: "Multiple files"
+                },
+                { 
+                    id: "tests-lint", 
+                    name: "Linting & TypeCheck", 
+                    type: "tests", 
+                    level: 1, 
+                    description: "ESLint, TypeScript type checking, and code quality validation", 
+                    tech: ["ESLint", "TypeScript", "Code Quality", "Linting"],
+                    fileCount: "Built-in"
+                },
 
                 // Deployment
-                { id: "deploy-frontend", name: "Frontend Deployment", type: "deployment", level: 1, description: "Vercel deployment for Next.js application", tech: ["Vercel", "CDN", "Serverless"] },
-                { id: "deploy-backend", name: "Backend Deployment", type: "deployment", level: 1, description: "Backend deployment (Railway/Fly.io/AWS)", tech: ["Railway", "Fly.io", "AWS", "Docker"] },
-                { id: "deploy-scripts", name: "Deployment Scripts", type: "deployment", level: 1, description: "Automation scripts for deployment and data updates", tech: ["Bash", "Python", "Automation"] }
+                { 
+                    id: "deploy-frontend", 
+                    name: "Frontend Deployment", 
+                    type: "deployment", 
+                    level: 1, 
+                    description: "Vercel deployment for Next.js application with CDN and serverless functions", 
+                    tech: ["Vercel", "CDN", "Serverless", "Edge Functions"],
+                    fileCount: "Automated"
+                },
+                { 
+                    id: "deploy-backend", 
+                    name: "Backend Deployment", 
+                    type: "deployment", 
+                    level: 1, 
+                    description: "Backend deployment with Docker, Railway, Fly.io, or AWS with health monitoring", 
+                    tech: ["Docker", "Railway", "Fly.io", "AWS", "Health Checks"],
+                    fileCount: "3 files"
+                },
+                { 
+                    id: "deploy-scripts", 
+                    name: "Deployment Scripts", 
+                    type: "deployment", 
+                    level: 1, 
+                    description: "Automation scripts for deployment, data updates, and maintenance tasks", 
+                    tech: ["Bash", "Python", "Automation", "Cron Jobs"],
+                    fileCount: "4 files"
+                },
+
+                // Scripts
+                { 
+                    id: "scripts-sec", 
+                    name: "SEC Data Manager", 
+                    type: "scripts", 
+                    level: 1, 
+                    description: "Scripts for managing SEC data updates, validation, and consistency checks", 
+                    tech: ["Python", "Data Management", "SEC API", "Validation"],
+                    fileCount: "4 files"
+                },
+                { 
+                    id: "scripts-cron", 
+                    name: "Cron Jobs", 
+                    type: "scripts", 
+                    level: 1, 
+                    description: "Scheduled tasks for data updates, maintenance, and automated processes", 
+                    tech: ["Cron", "Scheduling", "Automation", "Data Updates"],
+                    fileCount: "1 file"
+                }
             ],
 
             links: [
@@ -395,6 +773,7 @@
                 { source: "root", target: "core-edgar" },
                 { source: "root", target: "core-xbrl" },
                 { source: "root", target: "core-data" },
+                { source: "root", target: "core-config" },
                 { source: "root", target: "data-filings" },
                 { source: "root", target: "data-companies" },
                 { source: "root", target: "data-mappings" },
@@ -402,20 +781,24 @@
                 { source: "root", target: "docs-readme" },
                 { source: "root", target: "docs-api" },
                 { source: "root", target: "docs-deployment" },
-                { source: "root", target: "docs-calc" },
                 { source: "root", target: "config-vercel" },
-                { source: "root", target: "config-sec" },
+                { source: "root", target: "config-package" },
+                { source: "root", target: "config-typescript" },
                 { source: "root", target: "tests-unit" },
                 { source: "root", target: "tests-integration" },
+                { source: "root", target: "tests-lint" },
                 { source: "root", target: "deploy-frontend" },
                 { source: "root", target: "deploy-backend" },
                 { source: "root", target: "deploy-scripts" },
+                { source: "root", target: "scripts-sec" },
+                { source: "root", target: "scripts-cron" },
 
                 // Web app internal structure
                 { source: "web-app", target: "web-pages" },
                 { source: "web-app", target: "web-components" },
                 { source: "web-app", target: "web-api-routes" },
                 { source: "web-app", target: "web-hooks" },
+                { source: "web-app", target: "web-lib" },
 
                 // API app internal structure
                 { source: "api-app", target: "api-endpoints" },
@@ -428,6 +811,7 @@
                 { source: "api-app", target: "core-edgar" },
                 { source: "api-app", target: "core-xbrl" },
                 { source: "api-app", target: "core-data" },
+                { source: "api-app", target: "core-config" },
 
                 // Core to Data dependencies
                 { source: "core-extract", target: "data-filings" },
@@ -435,6 +819,7 @@
                 { source: "core-data", target: "data-companies" },
                 { source: "core-data", target: "data-defaults" },
                 { source: "core-xbrl", target: "data-filings" },
+                { source: "core-edgar", target: "data-filings" },
 
                 // Frontend to API dependencies
                 { source: "web-app", target: "api-app" },
@@ -444,19 +829,33 @@
                 { source: "tests-unit", target: "core-extract" },
                 { source: "tests-unit", target: "core-valuation" },
                 { source: "tests-unit", target: "core-cite" },
+                { source: "tests-unit", target: "core-edgar" },
+                { source: "tests-unit", target: "core-xbrl" },
+                { source: "tests-unit", target: "core-data" },
                 { source: "tests-integration", target: "api-app" },
+                { source: "tests-lint", target: "web-app" },
 
                 // Deployment dependencies
                 { source: "deploy-frontend", target: "web-app" },
                 { source: "deploy-frontend", target: "config-vercel" },
                 { source: "deploy-backend", target: "api-app" },
-                { source: "deploy-scripts", target: "config-sec" },
+                { source: "deploy-scripts", target: "scripts-sec" },
+
+                // Configuration dependencies
+                { source: "config-package", target: "web-app" },
+                { source: "config-package", target: "api-app" },
+                { source: "config-typescript", target: "web-app" },
+                { source: "config-vercel", target: "web-app" },
+
+                // Scripts dependencies
+                { source: "scripts-sec", target: "core-edgar" },
+                { source: "scripts-sec", target: "data-filings" },
+                { source: "scripts-cron", target: "scripts-sec" },
 
                 // Documentation dependencies
                 { source: "docs-api", target: "api-app" },
                 { source: "docs-deployment", target: "deploy-frontend" },
-                { source: "docs-deployment", target: "deploy-backend" },
-                { source: "docs-calc", target: "core-valuation" }
+                { source: "docs-deployment", target: "deploy-backend" }
             ]
         };
 
@@ -465,7 +864,7 @@
             .append("svg")
             .attr("width", "100%")
             .attr("height", "100%")
-            .attr("viewBox", "0 0 1400 800");
+            .attr("viewBox", "0 0 1600 900");
 
         const g = svg.append("g");
 
@@ -483,13 +882,13 @@
             .force("link", d3.forceLink(graphData.links)
                 .id(d => d.id)
                 .distance(d => {
-                    if (d.source.level === 0 || d.target.level === 0) return 150;
-                    if (d.source.level === d.target.level) return 100;
-                    return 120;
+                    if (d.source.level === 0 || d.target.level === 0) return 180;
+                    if (d.source.level === d.target.level) return 120;
+                    return 140;
                 }))
-            .force("charge", d3.forceManyBody().strength(-300))
-            .force("center", d3.forceCenter(700, 400))
-            .force("collision", d3.forceCollide().radius(60));
+            .force("charge", d3.forceManyBody().strength(-400))
+            .force("center", d3.forceCenter(800, 450))
+            .force("collision", d3.forceCollide().radius(70));
 
         // Create links
         const link = g.append("g")
@@ -513,7 +912,7 @@
 
         // Add circles to nodes
         node.append("circle")
-            .attr("r", d => d.level === 0 ? 50 : d.level === 1 ? 35 : 25)
+            .attr("r", d => d.level === 0 ? 60 : d.level === 1 ? 40 : 30)
             .attr("class", d => `node ${d.type}`)
             .attr("fill", d => {
                 const colors = {
@@ -524,7 +923,8 @@
                     docs: "#ffeaa7",
                     config: "#dda0dd",
                     tests: "#f7dc6f",
-                    deployment: "#bb8fce"
+                    deployment: "#bb8fce",
+                    scripts: "#a8e6cf"
                 };
                 return colors[d.type] || "#ccc";
             });
@@ -532,9 +932,17 @@
         // Add labels to nodes
         node.append("text")
             .text(d => d.name)
-            .attr("dy", d => d.level === 0 ? 60 : d.level === 1 ? 45 : 35)
+            .attr("dy", d => d.level === 0 ? 70 : d.level === 1 ? 50 : 40)
             .attr("font-size", d => d.level === 0 ? "14px" : d.level === 1 ? "12px" : "10px")
             .attr("font-weight", d => d.level === 0 ? "bold" : "normal");
+
+        // Add file count labels
+        node.append("text")
+            .text(d => d.fileCount || "")
+            .attr("dy", d => d.level === 0 ? 85 : d.level === 1 ? 65 : 55)
+            .attr("class", "file-count")
+            .attr("font-size", "10px")
+            .attr("opacity", 0.7);
 
         // Add hover effects and tooltips
         node.on("mouseover", function(event, d) {
@@ -543,7 +951,8 @@
                 tooltip.html(`
                     <strong>${d.name}</strong><br>
                     <em>${d.type.replace('-', ' ').toUpperCase()}</em><br>
-                    ${d.description}
+                    ${d.description}<br>
+                    <small>Files: ${d.fileCount || 'N/A'}</small>
                 `)
                 .style("left", (event.pageX + 10) + "px")
                 .style("top", (event.pageY - 10) + "px");
@@ -551,7 +960,7 @@
                 d3.select(this).select("circle")
                     .transition()
                     .duration(200)
-                    .attr("r", d.level === 0 ? 55 : d.level === 1 ? 40 : 30);
+                    .attr("r", d.level === 0 ? 65 : d.level === 1 ? 45 : 35);
             })
             .on("mouseout", function(event, d) {
                 d3.select("#tooltip").transition().duration(200).style("opacity", 0);
@@ -559,7 +968,7 @@
                 d3.select(this).select("circle")
                     .transition()
                     .duration(200)
-                    .attr("r", d.level === 0 ? 50 : d.level === 1 ? 35 : 25);
+                    .attr("r", d.level === 0 ? 60 : d.level === 1 ? 40 : 30);
             })
             .on("click", function(event, d) {
                 showInfoPanel(d);
@@ -610,6 +1019,58 @@
                 techTags.append("span")
                     .attr("class", "tech-tag")
                     .text(tech);
+            });
+        }
+
+        // Search functionality
+        function setupSearch() {
+            const searchBox = d3.select("#search-box");
+            const searchResults = d3.select("#search-results");
+
+            searchBox.on("input", function() {
+                const query = this.value.toLowerCase();
+                if (query.length < 2) {
+                    searchResults.style("display", "none");
+                    return;
+                }
+
+                const matches = graphData.nodes.filter(d => 
+                    d.name.toLowerCase().includes(query) ||
+                    d.description.toLowerCase().includes(query) ||
+                    d.tech.some(tech => tech.toLowerCase().includes(query))
+                );
+
+                searchResults.html("");
+                searchResults.style("display", matches.length > 0 ? "block" : "none");
+
+                matches.slice(0, 10).forEach(match => {
+                    const result = searchResults.append("div")
+                        .attr("class", "search-result")
+                        .text(match.name)
+                        .on("click", function() {
+                            // Center on the matched node
+                            const nodeElement = node.filter(d => d.id === match.id);
+                            if (nodeElement.size() > 0) {
+                                const nodeData = nodeElement.datum();
+                                svg.transition().duration(750).call(
+                                    zoom.transform,
+                                    d3.zoomIdentity
+                                        .translate(800 - nodeData.x, 450 - nodeData.y)
+                                        .scale(1.5)
+                                );
+                                showInfoPanel(match);
+                            }
+                            searchBox.property("value", "");
+                            searchResults.style("display", "none");
+                        });
+                });
+            });
+
+            // Hide search results when clicking outside
+            d3.select("body").on("click", function(event) {
+                if (!event.target.closest("#search-box") && !event.target.closest("#search-results")) {
+                    searchResults.style("display", "none");
+                }
             });
         }
 
@@ -682,10 +1143,32 @@
                         visibleNodes.includes(d.source) && visibleNodes.includes(d.target)
                     );
                     break;
+                case "core":
+                    visibleNodes = graphData.nodes.filter(d =>
+                        d.type === "core" || d.id === "root" || d.id.startsWith("data")
+                    );
+                    visibleLinks = graphData.links.filter(d =>
+                        visibleNodes.includes(d.source) && visibleNodes.includes(d.target)
+                    );
+                    break;
+                case "tech":
+                    // Show all nodes but highlight technology-related ones
+                    visibleNodes = graphData.nodes;
+                    visibleLinks = graphData.links;
+                    // Add visual emphasis to tech-heavy nodes
+                    node.style("opacity", d => 
+                        d.tech.length > 5 ? 1 : d.tech.length > 3 ? 0.8 : 0.6
+                    );
+                    link.style("opacity", 0.4);
+                    return;
                 default:
                     visibleNodes = graphData.nodes;
                     visibleLinks = graphData.links;
             }
+
+            // Reset opacity for all nodes
+            node.style("opacity", 1);
+            link.style("opacity", 1);
 
             // Update visibility
             node.style("opacity", d => visibleNodes.includes(d) ? 1 : 0.1);
@@ -697,7 +1180,8 @@
             simulation.alpha(1).restart();
         }
 
-        // Initialize with overview
+        // Initialize
+        setupSearch();
         filterNodes("all");
     </script>
 </body>
